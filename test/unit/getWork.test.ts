@@ -204,6 +204,35 @@ describe("a work with more editions than one answer holds", () => {
   });
 });
 
+describe("a work whose editions do not fit in one answer", () => {
+  it("still says under what terms its scores are published", async () => {
+    // The copyright of a score lives on its edition, and a work of the
+    // twentieth century is exactly where "free here, protected there" decides
+    // everything: leaving that out of a truncated answer invites a reader to
+    // conclude the work is free.
+    const { client } = clientServing([
+      { title: "Six éditions (Nadaud, Camille)", fixture: "work-many-editions.html" },
+    ]);
+
+    const result = await runGetWork(client, { page: "Six éditions (Nadaud, Camille)" });
+
+    expect(result.structuredContent).toMatchObject({
+      editions: null,
+      copyright_summary: [
+        {
+          statement: "Public Domain",
+          headline: "Public Domain",
+          restrictions: [],
+          remark: null,
+          reviewed_in: ["Canada", "United States", "European Union"],
+          editions: 6,
+        },
+      ],
+    });
+    expect(result.content[0]?.text).toContain("Public Domain");
+  });
+});
+
 describe("what the tool refuses", () => {
   it("refuses a call naming neither a page nor a page id", async () => {
     const { client } = clientServing([

@@ -77,6 +77,25 @@ describe("the facets of a work", () => {
     ]);
   });
 
+  it("pairs an authority with the identifier it published", () => {
+    // The page writes the name of a register as a link to the article
+    // explaining it, then the identifier itself as a link to the register. Read
+    // as two entries, half of an authority list points at encyclopedia pages.
+    expect(readFull().authorities).toEqual([
+      { authority: "WorldCat", id: null, url: "https://example.invalid/worldcat/1" },
+      { authority: "VIAF", id: "900000", url: "https://example.invalid/viaf/900000" },
+      { authority: "BNF", id: "12345678x", url: "https://example.invalid/bnf/12345678x" },
+    ]);
+  });
+
+  it("drops an entry of that cell that links to nothing", () => {
+    // The cell ends with a remark rather than a register on some pages, and a
+    // remark is no record of the work anywhere.
+    expect(readFull().authorities.map((entry) => entry.authority)).not.toContain(
+      "see also the composer category",
+    );
+  });
+
   it("reads a facet the page left empty as absent", () => {
     const outcome = parseWorkPage(fixture("work-sparse.html"), {
       ...CONTEXT,
@@ -99,6 +118,21 @@ describe("the facets of a work", () => {
       throw new Error("expected a work");
     }
     expect(outcome.work.internal_catalogue_number).toBeNull();
+  });
+});
+
+describe("what a work says about copyright as a whole", () => {
+  it("summarises the statements its editions carry, and counts each", () => {
+    expect(readFull().copyright_summary).toEqual([
+      {
+        statement: "Public Domain - Non-PD US",
+        headline: "Public Domain",
+        restrictions: ["Non-PD US"],
+        remark: null,
+        reviewed_in: ["Canada", "United States", "European Union"],
+        editions: 1,
+      },
+    ]);
   });
 });
 
@@ -132,7 +166,34 @@ describe("the editions of a work", () => {
       statement: "Public Domain - Non-PD US",
       headline: "Public Domain",
       restrictions: ["Non-PD US"],
+      remark: null,
       reviewed_in: ["Canada", "United States", "European Union"],
+    });
+  });
+
+  it("tells a jurisdiction apart from a remark written beside the statement", () => {
+    // Some editions carry "Public Domain - See notes on copyright status for
+    // urtext editions". Counted as a jurisdiction, that reads as a country the
+    // score is protected in, and there is no such country.
+    const remarked = parseWorkPage(fixture("work-remarked-copyright.html"), CONTEXT);
+    if (remarked.kind !== "work") {
+      throw new Error("expected a work");
+    }
+
+    expect(remarked.work.copyright_summary[0]).toMatchObject({
+      statement: "Public Domain - See notes on copyright status for urtext editions",
+      headline: "Public Domain",
+      restrictions: [],
+      remark: "See notes on copyright status for urtext editions",
+    });
+  });
+
+  it("keeps a remark and a jurisdiction apart when a statement holds both", () => {
+    const work = readFull();
+
+    expect(work.copyright_summary[0]).toMatchObject({
+      restrictions: ["Non-PD US"],
+      remark: null,
     });
   });
 

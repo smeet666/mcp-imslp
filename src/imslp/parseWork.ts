@@ -9,8 +9,26 @@
 
 import { parseFailure } from "../errors.js";
 import { captured, fieldValue, group, links, startOf, tableRows, text } from "./html.js";
-import type { Copyright, Edition, Link, Work, WorkFile, WorkSection } from "../types.js";
+import type {
+  Authority,
+  Copyright,
+  CopyrightSummary,
+  Edition,
+  Link,
+  Work,
+  WorkFile,
+  WorkSection,
+} from "../types.js";
 import { toAbsoluteUrl, wikiPageUrl } from "./urls.js";
+
+/**
+ * What a jurisdiction looks like in a copyright statement.
+ *
+ * The library writes the places a score is not free as "Non-PD" followed by the
+ * country, and marks its Asian mirror as "PML-Asia". Anything else after the
+ * separator is a sentence rather than a place.
+ */
+const A_JURISDICTION = /^(?:Non-PD\b|PML-)/;
 
 /** What IMSLP checks when it states a copyright, and what it leaves unsaid. */
 const REVIEWED_IN = ["Canada", "United States", "European Union"];
@@ -139,7 +157,8 @@ export function parseWorkPage(html: string, context: WorkPageContext): WorkPage 
       extra_information: facets.extra_information ?? null,
       genre_categories: readGenres(html),
       external_links: readLinkField(html, "External Links"),
-      authorities: readLinkField(html, "Authorities"),
+      authorities: readAuthorities(html),
+      copyright_summary: summariseCopyright(editions),
       sections,
       editions: editions.length > EDITIONS_IN_A_WORK ? null : editions,
       editions_truncated: editions.length > EDITIONS_IN_A_WORK,
@@ -227,6 +246,60 @@ function readLinkField(html: string, name: string): Link[] {
       .filter((link) => link.label !== "" && OFF_SITE.test(link.url));
   }
   return [];
+}
+
+/**
+ * The registers holding a record of the work, with the identifier in each.
+ *
+ * The cell separates its entries with semicolons, and an entry is written one
+ * of two ways: a register linked on its own, or the name of a register linked
+ * to the article explaining it, then the identifier linked to the register.
+ */
+function readAuthorities(html: string): Authority[] {
+  for (const row of tableRows(html)) {
+    if (row.name !== "Authorities") {
+      continue;
+    }
+    return row.html
+      .split(";")
+      .map((entry) => readAuthority(entry))
+      .filter((entry): entry is Authority => entry !== null);
+  }
+  return [];
+}
+
+function readAuthority(entry: string): Authority | null {
+  const [named, identifier] = links(entry);
+  if (!named) {
+    return null;
+  }
+  if (identifier) {
+    return { authority: named.label, id: identifier.label, url: identifier.href };
+  }
+  return { authority: named.label, id: null, url: named.href };
+}
+
+/**
+ * The distinct copyright statements of a page, with the editions carrying each.
+ *
+ * The copyright of a score lives on its edition, so a work whose editions were
+ * left to another tool would otherwise say nothing about where it is free.
+ */
+function summariseCopyright(editions: Edition[]): CopyrightSummary[] {
+  const byStatement = new Map<string, CopyrightSummary>();
+  for (const edition of editions) {
+    const copyright = edition.copyright;
+    if (copyright === null) {
+      continue;
+    }
+    const seen = byStatement.get(copyright.statement);
+    if (seen) {
+      seen.editions += 1;
+    } else {
+      byStatement.set(copyright.statement, { ...copyright, editions: 1 });
+    }
+  }
+  return [...byStatement.values()];
 }
 
 /** The sections, with the count each tab publishes for itself. */
@@ -336,7 +409,7 @@ function readCopyright(cell: string): Copyright {
   const statement = (fieldValue(cell) ?? "").trim();
   const at = statement.indexOf(" - ");
   const headline = at === -1 ? statement : statement.slice(0, at);
-  const restrictions =
+  const parts =
     at === -1
       ? []
       : statement
@@ -344,8 +417,16 @@ function readCopyright(cell: string): Copyright {
           .split(",")
           .map((part) => part.trim())
           .filter((part) => part !== "");
+  const restrictions = parts.filter((part) => A_JURISDICTION.test(part));
+  const remarks = parts.filter((part) => !A_JURISDICTION.test(part));
 
-  return { statement, headline: headline.trim(), restrictions, reviewed_in: REVIEWED_IN };
+  return {
+    statement,
+    headline: headline.trim(),
+    restrictions,
+    remark: remarks.length === 0 ? null : remarks.join(", "),
+    reviewed_in: REVIEWED_IN,
+  };
 }
 
 /** One file entry, read from what its own lines publish. */

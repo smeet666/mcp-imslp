@@ -7,6 +7,20 @@ export interface Link {
 }
 
 /**
+ * A record of the work in a library's own catalogue.
+ *
+ * A page writes the name of a register as a link to the article explaining it,
+ * then the identifier as a link to the register itself. The two belong to one
+ * entry: kept apart, half of an authority list points at encyclopedia pages.
+ */
+export interface Authority {
+  authority: string;
+  /** Null for a register the page links to without naming an identifier. */
+  id: string | null;
+  url: string;
+}
+
+/**
  * The copyright of an edition, as IMSLP states it.
  *
  * A statement reads "Public Domain - Non-PD US": free in one place and
@@ -19,7 +33,26 @@ export interface Copyright {
   statement: string;
   headline: string;
   restrictions: string[];
+  /**
+   * A remark the library wrote after the same separator the jurisdictions use.
+   *
+   * "Public Domain - See notes on copyright status for urtext editions" ends in
+   * a sentence rather than in a country, and counting it among the
+   * jurisdictions would name a place the score is protected in that does not
+   * exist.
+   */
+  remark: string | null;
   reviewed_in: string[];
+}
+
+/**
+ * One copyright statement, and how many editions of the page carry it.
+ *
+ * The count is of edition blocks rendered on the page, which is what this
+ * server counted itself, rather than a figure IMSLP published.
+ */
+export interface CopyrightSummary extends Copyright {
+  editions: number;
 }
 
 /** One downloadable entry of an edition. */
@@ -106,7 +139,16 @@ export interface Work {
   extra_information: string | null;
   genre_categories: string[];
   external_links: Link[];
-  authorities: Link[];
+  authorities: Authority[];
+  /**
+   * The terms its scores are published under, one entry per distinct statement.
+   *
+   * Stated whether or not the editions themselves fit in an answer: the
+   * copyright of a score lives on its edition, and a work whose editions were
+   * left to another tool would otherwise say nothing at all about where it is
+   * free.
+   */
+  copyright_summary: CopyrightSummary[];
   sections: WorkSection[];
   /**
    * The editions of the work, when the page holds few enough of them.

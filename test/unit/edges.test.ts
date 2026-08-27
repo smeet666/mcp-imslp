@@ -171,6 +171,7 @@ describe("entries written in unusual ways", () => {
       statement: "",
       headline: "",
       restrictions: [],
+      remark: null,
       reviewed_in: ["Canada", "United States", "European Union"],
     });
   });

@@ -256,6 +256,15 @@ ${generalInformation([
     "External Links",
     '<span class="plainlinks"><a rel="nofollow" class="external text" href="https://example.invalid/aubertin">Composer page</a></span>',
   ),
+  row(
+    "Authorities",
+    '<a rel="nofollow" class="external text" href="https://example.invalid/worldcat/1">WorldCat</a>; ' +
+      '<a href="http://en.wikipedia.org/wiki/Virtual_International_Authority_File" class="extiw" title="wikipedia:Virtual International Authority File">VIAF</a>: ' +
+      '<a rel="nofollow" class="external text" href="https://example.invalid/viaf/900000">900000</a>; ' +
+      '<a href="http://en.wikipedia.org/wiki/Biblioth%C3%A8que_nationale_de_France" class="extiw" title="wikipedia:Bibliothèque nationale de France">BNF</a>: ' +
+      '<a rel="nofollow" class="external text" href="https://example.invalid/bnf/12345678x">12345678x</a>; ' +
+      "see also the composer category",
+  ),
 ])}
 `;
 
@@ -444,6 +453,49 @@ ${tab({
 ${tab({ id: "tabScore9", name: "Unlisted", type: "score", body: "<p>Nothing here.</p>" })}
 `;
 
+/**
+ * An edition whose copyright statement ends in a remark rather than a country.
+ *
+ * The library writes both after the same separator, so the two are told apart
+ * by what they look like rather than by where they sit.
+ */
+const REMARKED_COPYRIGHT = `${tabHeader([{ id: "tabScore1", name: "Scores", count: 1 }])}
+${tab({
+  id: "tabScore1",
+  name: "Scores",
+  type: "score",
+  body: `${fileEntry({
+    id: 900_300,
+    description: "Complete Score",
+    first: true,
+    block: 1,
+    audio: false,
+    size: "2.00MB",
+    pages: 30,
+    downloads: 12,
+    rating: null,
+    votes: null,
+    uploader: "Inventaire",
+    date: "2021/5/6",
+    format: "PDF",
+    scannerCode: null,
+    scannerName: null,
+  })}${editionTable([
+    row(
+      "Copyright",
+      copyrightCell("Public Domain&#160;- See notes on copyright status for urtext editions"),
+    ),
+  ])}`,
+})}
+${generalInformation([
+  row('<span class="wi_head">Work Title</span>', '<span class="wi_head">Édition urtext</span>'),
+  row(
+    "Composer",
+    '<a href="/wiki/Category:Nadaud,_Camille" title="Category:Nadaud, Camille">Nadaud, Camille</a>',
+  ),
+])}
+`;
+
 /** A page that stands for another one. */
 const REDIRECT = `<ol><li>REDIRECT <a href="/wiki/Trois_inventions,_Op.12_(Aubertin,_Mireille)" title="Trois inventions, Op.12 (Aubertin, Mireille)">Trois inventions, Op.12 (Aubertin, Mireille)</a>
 </li></ol>
@@ -460,6 +512,7 @@ const PAGES = {
   "work-no-composer.html": NO_COMPOSER,
   "work-no-composer-row.html": NO_COMPOSER_ROW,
   "work-odd-entries.html": ODD_ENTRIES,
+  "work-remarked-copyright.html": REMARKED_COPYRIGHT,
   "work-redirect.html": REDIRECT,
   "work-empty.html": EMPTY,
 };

@@ -57,6 +57,13 @@ const copyrightSchema = z.object({
       "The jurisdictions the statement excludes, for example 'Non-PD US'. Empty when it excludes " +
         "none, which is not a claim about countries IMSLP does not review.",
     ),
+  remark: z
+    .string()
+    .nullable()
+    .describe(
+      "A remark the library wrote beside the statement, for example 'See notes on copyright " +
+        "status for urtext editions'. It qualifies the terms without naming a place.",
+    ),
   reviewed_in: z
     .array(z.string())
     .describe("Where IMSLP checks copyright: Canada, the United States and the European Union."),
@@ -130,7 +137,22 @@ export const getWorkOutputShape = {
   extra_information: z.string().nullable(),
   genre_categories: z.array(z.string()),
   external_links: z.array(linkSchema),
-  authorities: z.array(linkSchema).describe("Authority records: VIAF, LCCN, WorldCat, Wikipedia."),
+  authorities: z
+    .array(
+      z.object({
+        authority: z.string().describe("The register, for example 'VIAF' or 'BNF'."),
+        id: z.string().nullable().describe("The identifier in that register, when it names one."),
+        url: z.string(),
+      }),
+    )
+    .describe("Records of the work in library catalogues: VIAF, LCCN, WorldCat, BNF, GND."),
+  copyright_summary: z
+    .array(copyrightSchema.extend({ editions: z.number().int() }))
+    .describe(
+      "The terms the scores of this work are published under, one entry per distinct statement, " +
+        "with the number of editions on the page carrying it. Stated whether or not the editions " +
+        "themselves fit in this answer.",
+    ),
   sections: z
     .array(z.object({ name: z.string(), files: z.number().int() }))
     .describe("The sections of the page, with the number of entries the site counts in each."),
@@ -195,9 +217,7 @@ function noteworthy(work: Work, cached: boolean): string[] {
     );
   }
 
-  const restricted = new Set(
-    (work.editions ?? []).flatMap((each) => each.copyright?.restrictions ?? []),
-  );
+  const restricted = new Set(work.copyright_summary.flatMap((terms) => terms.restrictions));
   if (restricted.size > 0) {
     notes.push(
       `Some editions here are not free everywhere: ${[...restricted].join(", ")}. IMSLP reviews ` +
@@ -243,6 +263,16 @@ function asText(work: Work): string {
     .map((section) => `${section.name}: ${section.files}`)
     .join(", ");
   lines.push(sections === "" ? "No score or recording on this page." : sections);
+
+  // The terms are printed whether or not the editions themselves are here, so a
+  // reader of the text block never sees a work whose scores say nothing about
+  // where they are free.
+  for (const terms of work.copyright_summary) {
+    lines.push(
+      `Terms (${terms.editions} edition${terms.editions === 1 ? "" : "s"}): ` +
+        copyrightAsText(terms),
+    );
+  }
 
   for (const each of work.editions ?? []) {
     lines.push("", editionAsText(each));
