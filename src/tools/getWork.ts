@@ -3,12 +3,23 @@
  */
 
 import { z } from "zod";
-import type { ImslpClient, PageTarget } from "../imslp/client.js";
+import type { ImslpClient } from "../imslp/client.js";
 import { invalidInput } from "../errors.js";
 import type { Copyright, Edition, Work } from "../types.js";
 import { strictInput } from "./arguments.js";
+import { copyrightSchema, editionSchema, pageTarget } from "./work.js";
 import { noteIfTextIsCut, ok, quotedBlock, toToolError } from "./shared.js";
 import type { ToolResult } from "./shared.js";
+
+/**
+ * The most editions one answer carries.
+ *
+ * A work of the library runs from one file to a few hundred, and the median
+ * work holds one: including the editions answers the ordinary question in a
+ * single call, and a heavily edited work is handed to the tool that pages
+ * through them rather than being cut without saying so.
+ */
+export const EDITIONS_IN_AN_ANSWER = 5;
 
 export const getWorkDescription = [
   "Read one work on IMSLP: its title and alternative titles, the composer, the opus and catalogue",
@@ -47,63 +58,6 @@ export const getWorkInput = strictInput({
 });
 
 const linkSchema = z.object({ label: z.string(), url: z.string() });
-
-const copyrightSchema = z.object({
-  statement: z.string().describe("The statement as IMSLP publishes it."),
-  headline: z.string().describe("What the statement leads with, for example 'Public Domain'."),
-  restrictions: z
-    .array(z.string())
-    .describe(
-      "The jurisdictions the statement excludes, for example 'Non-PD US'. Empty when it excludes " +
-        "none, which is not a claim about countries IMSLP does not review.",
-    ),
-  remark: z
-    .string()
-    .nullable()
-    .describe(
-      "A remark the library wrote beside the statement, for example 'See notes on copyright " +
-        "status for urtext editions'. It qualifies the terms without naming a place.",
-    ),
-  reviewed_in: z
-    .array(z.string())
-    .describe("Where IMSLP checks copyright: Canada, the United States and the European Union."),
-});
-
-const fileSchema = z.object({
-  imslp_id: z.number().int(),
-  description: z.string().describe("What the entry is called, for example 'Complete Score'."),
-  format: z.string().nullable(),
-  size_bytes: z.number().int().nullable(),
-  pages: z.number().int().nullable(),
-  downloads: z
-    .number()
-    .int()
-    .nullable()
-    .describe("Null when the entry prints no counter, which is not a count of zero."),
-  rating: z
-    .object({ score: z.number(), votes: z.number().int() })
-    .nullable()
-    .describe("Null when nobody has voted, since the page then prints 0.0 out of 10."),
-  uploader: z.string().nullable(),
-  uploaded_on: z.string().nullable().describe("An ISO date."),
-  scanned_by_code: z
-    .string()
-    .nullable()
-    .describe("The RISM sigla of the library, for example 'US-R'."),
-  scanned_by_name: z.string().nullable(),
-  page_url: z.string().describe("The work page. The file itself is never linked."),
-});
-
-const editionSchema = z.object({
-  section: z.string().describe("The section of the page it sits in, for example 'Scores'."),
-  copyright: copyrightSchema.nullable(),
-  publisher_info: z.string().nullable(),
-  editor: z.string().nullable(),
-  arranger: z.string().nullable(),
-  performers: z.string().nullable(),
-  misc_notes: z.string().nullable().describe("A note an editor typed, quoted as published."),
-  files: z.array(fileSchema),
-});
 
 export const getWorkOutputShape = {
   title: z.string(),
@@ -159,7 +113,10 @@ export const getWorkOutputShape = {
   editions: z
     .array(editionSchema)
     .nullable()
-    .describe("Null when the work holds more editions than one answer carries."),
+    .describe(
+      "Every edition the page holds, files included. Null when the work holds more of them than " +
+        "one answer carries, and list_work_files then pages through them.",
+    ),
   editions_truncated: z.boolean(),
   redirected_from: z.string().nullable().describe("The title asked for, when it redirected here."),
   source: z.literal("IMSLP"),
@@ -172,34 +129,8 @@ export interface GetWorkArgs {
   pageid?: number;
 }
 
-/**
- * The page a caller named, refusing a call that names none or names two.
- *
- * A call carrying both a title and an id asks two questions, and answering one
- * of them would report the answer to a question the caller may not have asked.
- */
-function target(args: GetWorkArgs): PageTarget {
-  const page = args.page?.trim();
-  if (page && args.pageid !== undefined) {
-    throw invalidInput(
-      "This tool takes 'page' or 'pageid', and this call passes both.",
-      "Pass the title, or the page id a search returned.",
-    );
-  }
-  if (page) {
-    return { page };
-  }
-  if (args.pageid !== undefined) {
-    return { pageid: args.pageid };
-  }
-  throw invalidInput(
-    "This tool needs the work's page title or its page id, and this call passes neither.",
-    "A title is written 'Work (Composer)', for example 'Nocturnes, Op.9 (Chopin, Frédéric)'.",
-  );
-}
-
 /** What a caller has to know about an answer, beyond the answer itself. */
-function noteworthy(work: Work, cached: boolean): string[] {
+function noteworthy(work: Work, truncated: boolean, cached: boolean): string[] {
   const notes: string[] = [];
 
   if (work.redirected_from !== null) {
@@ -208,12 +139,12 @@ function noteworthy(work: Work, cached: boolean): string[] {
     );
   }
 
-  if (work.editions_truncated) {
+  if (truncated) {
     const entries = work.sections.reduce((total, section) => total + section.files, 0);
     notes.push(
-      `This work holds more editions than one answer carries, so 'editions' is null here. The ` +
-        `page counts ${entries} entries across its sections; call list_work_files with the same ` +
-        "page to read them.",
+      `This work holds ${work.editions.length} editions, more than one answer carries, so ` +
+        `'editions' is null here. The page counts ${entries} entries across its sections; call ` +
+        "list_work_files with the same page to read them.",
     );
   }
 
@@ -225,7 +156,7 @@ function noteworthy(work: Work, cached: boolean): string[] {
     );
   }
 
-  if (work.editions?.length === 0 && work.sections.every((section) => section.files === 0)) {
+  if (work.editions.length === 0 && work.sections.every((section) => section.files === 0)) {
     notes.push("This work page holds no score and no recording, which is what the page says.");
   }
 
@@ -235,8 +166,14 @@ function noteworthy(work: Work, cached: boolean): string[] {
   return notes;
 }
 
-/** The answer as a block of text, for a client that renders nothing else. */
-function asText(work: Work): string {
+/**
+ * The answer as a block of text, for a client that renders nothing else.
+ *
+ * The work is read for its facets and the answer for its editions, so a
+ * truncated answer prints the facets of the work and none of the editions it
+ * did not carry.
+ */
+function asText(answered: { editions: Edition[] | null }, work: Work): string {
   const lines = [
     work.composer === null ? work.title : `${work.title} — ${work.composer}`,
     work.page_url,
@@ -274,7 +211,7 @@ function asText(work: Work): string {
     );
   }
 
-  for (const each of work.editions ?? []) {
+  for (const each of answered.editions ?? []) {
     lines.push("", editionAsText(each));
   }
   return lines.join("\n");
@@ -313,13 +250,15 @@ export async function runGetWork(
   signal?: AbortSignal,
 ): Promise<ToolResult> {
   try {
-    const { data, cached } = await client.getWork(target(args), signal);
+    const { data, cached } = await client.getWork(pageTarget(args, invalidInput), signal);
 
-    const notes = noteworthy(data, cached);
-    const text = asText(data);
+    const truncated = data.editions.length > EDITIONS_IN_AN_ANSWER;
+    const answered = { ...data, editions: truncated ? null : data.editions };
+    const notes = noteworthy(data, truncated, cached);
+    const text = asText(answered, data);
     noteIfTextIsCut(text, notes);
 
-    return ok({ ...data, notes }, text, notes);
+    return ok({ ...answered, editions_truncated: truncated, notes }, text, notes);
   } catch (error) {
     return toToolError(error);
   }

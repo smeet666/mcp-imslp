@@ -150,15 +150,8 @@ export interface Work {
    */
   copyright_summary: CopyrightSummary[];
   sections: WorkSection[];
-  /**
-   * The editions of the work, when the page holds few enough of them.
-   *
-   * A work whose page runs to dozens of editions is left to the tool that
-   * pages through them, and `editions_truncated` says which of the two
-   * happened. Null here never means a work without scores.
-   */
-  editions: Edition[] | null;
-  editions_truncated: boolean;
+  /** Every edition the page holds, in the order it lists them. */
+  editions: Edition[];
   /** The title asked for, when it redirected here. */
   redirected_from: string | null;
   source: "IMSLP";

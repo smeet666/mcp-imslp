@@ -36,9 +36,6 @@ const REVIEWED_IN = ["Canada", "United States", "European Union"];
 /** Stands in for a pattern that matched nothing, so a reading has one shape. */
 const EMPTY_MATCH = [""] as unknown as RegExpExecArray;
 
-/** The most editions a work page can hold and still be answered in one piece. */
-export const EDITIONS_IN_A_WORK = 5;
-
 const REDIRECT = /<li>\s*REDIRECT\s*<a\b[^>]*title="([^"]+)"/i;
 const TAB_COUNT = /<a href="#(tab\w+)">([^<(]+)\(<span id="tab\w+_ct">(\d+)<\/span>/g;
 const TAB_REGION = /<div class="jq-ui-tabs[^"]*" id="(tab\w+)">/g;
@@ -160,8 +157,7 @@ export function parseWorkPage(html: string, context: WorkPageContext): WorkPage 
       authorities: readAuthorities(html),
       copyright_summary: summariseCopyright(editions),
       sections,
-      editions: editions.length > EDITIONS_IN_A_WORK ? null : editions,
-      editions_truncated: editions.length > EDITIONS_IN_A_WORK,
+      editions,
       redirected_from: context.redirectedFrom ?? null,
       source: "IMSLP",
       license: "CC BY-SA 4.0",

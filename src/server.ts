@@ -18,6 +18,13 @@ import {
   getWorkOutputShape,
   runGetWork,
 } from "./tools/getWork.js";
+import type { ListWorkFilesArgs } from "./tools/listWorkFiles.js";
+import {
+  listWorkFilesDescription,
+  listWorkFilesInput,
+  listWorkFilesOutputShape,
+  runListWorkFiles,
+} from "./tools/listWorkFiles.js";
 import { PKG_VERSION } from "./version.js";
 
 export interface CreateServerOptions {
@@ -54,8 +61,11 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
         "per jurisdiction, and IMSLP reviews Canada, the United States and the European Union: a " +
         "score can be free in one and protected in another, so never report it as public domain " +
         "without saying where. This server reads the library and links to it; it downloads no " +
-        "score file. Credit IMSLP and link the work page when you show a result, and name the " +
-        "CC BY-SA 4.0 licence the library publishes its pages under.",
+        "score file. get_work answers the work itself and carries its editions when there are few " +
+        "of them; list_work_files pages through them when there are many, and can be restricted " +
+        "to one section of the page in the wording that page prints. Credit IMSLP and link the " +
+        "work page when you show a result, and name the CC BY-SA 4.0 licence the library " +
+        "publishes its pages under.",
     },
   );
 
@@ -72,6 +82,18 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
       annotations: READ_ONLY,
     },
     async (args, extra) => runGetWork(client, args as GetWorkArgs, extra?.signal),
+  );
+
+  server.registerTool(
+    "list_work_files",
+    {
+      title: "Read the editions of a work",
+      description: listWorkFilesDescription,
+      inputSchema: listWorkFilesInput,
+      outputSchema: z.object(listWorkFilesOutputShape),
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => runListWorkFiles(client, args as ListWorkFilesArgs, extra?.signal),
   );
 
   logger.info(

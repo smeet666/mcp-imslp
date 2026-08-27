@@ -164,7 +164,7 @@ ${tab({
   id: "tabAudio1",
   name: "Recordings",
   type: "audio",
-  body: fileEntry({
+  body: `${fileEntry({
     id: 900_001,
     description: "Complete Recording",
     first: true,
@@ -180,7 +180,13 @@ ${tab({
     format: "MP3",
     scannerCode: null,
     scannerName: null,
-  }),
+  })}${editionTable([
+    row("Performers", "Ensemble inventé"),
+    row(
+      "Performer Pages",
+      '<a href="/wiki/Category:Ensemble_invent%C3%A9" title="Category:Ensemble inventé">Ensemble inventé</a>',
+    ),
+  ])}`,
 })}
 ${tab({
   id: "tabScore1",

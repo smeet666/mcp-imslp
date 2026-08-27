@@ -27,7 +27,7 @@ describe("what a host is told", () => {
 
     const { tools } = await client.listTools();
 
-    expect(tools.map((tool) => tool.name)).toEqual(["get_work"]);
+    expect(tools.map((tool) => tool.name)).toEqual(["get_work", "list_work_files"]);
     await server.close();
   });
 

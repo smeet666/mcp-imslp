@@ -308,6 +308,31 @@ describe("calling the tool through the protocol", () => {
   });
 });
 
+describe("calling the second tool through the protocol", () => {
+  it("answers a host that asks for the editions of a work", async () => {
+    const server = createServer({
+      config: loadConfig({}),
+      logger: createLogger("silent"),
+      fetchImpl: (async () =>
+        envelope(
+          "Three Inventions (Aubertin, Mireille)",
+          "work-full.html",
+        )) as unknown as typeof fetch,
+    });
+    const client = new Client({ name: "test", version: "0.0.0" });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+
+    const result = await client.callTool({
+      name: "list_work_files",
+      arguments: { page: "Three Inventions (Aubertin, Mireille)", section: "Scores" },
+    });
+
+    expect((result.structuredContent as { returned?: number }).returned).toBe(1);
+    await server.close();
+  });
+});
+
 describe("a read nobody is waiting for any more", () => {
   it("is not asked of the site a second time", async () => {
     const fetchImpl = vi.fn(async () => envelope("A work (A composer)", "work-sparse.html"));
