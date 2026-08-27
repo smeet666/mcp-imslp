@@ -13,6 +13,7 @@
 import process from "node:process";
 import { describe, expect, it } from "vitest";
 import { ImslpClient } from "../../src/imslp/client.js";
+import type { Edition, Work, WorkFile } from "../../src/types.js";
 import { PKG_VERSION, REPO_URL } from "../../src/version.js";
 
 const evaluating = process.env.IMSLP_EVAL === "1";
@@ -57,6 +58,43 @@ const INTERFACE = /\[tag\/|force assignment|Javascript is required|searchmatch|<
 /** The paths the robots.txt of IMSLP disallows, which no answer may carry. */
 const DISALLOWED = /\/images\/|\/imglnks\/|wiki\/File:|ImagefromIndex/;
 
+/** Every value of a work, held to what a value of an answer may hold. */
+function statesWordsRatherThanInterface(work: Work, title: string): void {
+  for (const [field, value] of Object.entries(work)) {
+    if (typeof value === "string") {
+      expect(value, `${title}: ${field} carries interface rather than words`).not.toMatch(
+        INTERFACE,
+      );
+    }
+  }
+}
+
+/** Every file of an edition, held to what a file has to state about itself. */
+function statesWhatAFileMustState(file: WorkFile, title: string): void {
+  expect(file.description, `${title}: file ${file.imslp_id} is named`).toBeTruthy();
+  expect(file.imslp_id, `${title}: a file carries its number`).toBeGreaterThan(0);
+  expect(file.page_url, `${title}: a file links to the work page`).toContain(
+    "https://imslp.org/wiki/",
+  );
+  if (file.format !== null) {
+    expect(file.format_code, `${title}: a format states its code`).toBeTruthy();
+  }
+  if (file.blocked) {
+    expect(file.blocked_reason, `${title}: a blocked file says why`).toBeTruthy();
+  }
+}
+
+/** Every edition of a work, held to what an edition may claim. */
+function statesWhatAnEditionMayClaim(edition: Edition, title: string): void {
+  expect(edition.section, `${title}: an edition names its section`).toBeTruthy();
+  for (const restriction of edition.copyright?.restrictions ?? []) {
+    expect(restriction, `${title}: a restriction names a place`).toMatch(/^(Non-PD|PML-)/);
+  }
+  for (const file of edition.files) {
+    statesWhatAFileMustState(file, title);
+  }
+}
+
 describe.skipIf(!evaluating)("works drawn from the catalogue", () => {
   it("answer the properties every work has to satisfy", async () => {
     const titles = await drawTitles(draws);
@@ -69,33 +107,10 @@ describe.skipIf(!evaluating)("works drawn from the catalogue", () => {
       expect(JSON.stringify(data), `${title}: no address under a disallowed path`).not.toMatch(
         DISALLOWED,
       );
-
-      for (const [field, value] of Object.entries(data)) {
-        if (typeof value === "string") {
-          expect(value, `${title}: ${field} carries interface rather than words`).not.toMatch(
-            INTERFACE,
-          );
-        }
-      }
+      statesWordsRatherThanInterface(data, title);
 
       for (const edition of data.editions) {
-        expect(edition.section, `${title}: an edition names its section`).toBeTruthy();
-        for (const restriction of edition.copyright?.restrictions ?? []) {
-          expect(restriction, `${title}: a restriction names a place`).toMatch(/^(Non-PD|PML-)/);
-        }
-        for (const file of edition.files) {
-          expect(file.description, `${title}: file ${file.imslp_id} is named`).toBeTruthy();
-          expect(file.imslp_id, `${title}: a file carries its number`).toBeGreaterThan(0);
-          expect(file.page_url, `${title}: a file links to the work page`).toContain(
-            "https://imslp.org/wiki/",
-          );
-          if (file.format !== null) {
-            expect(file.format_code, `${title}: a format states its code`).toBeTruthy();
-          }
-          if (file.blocked) {
-            expect(file.blocked_reason, `${title}: a blocked file says why`).toBeTruthy();
-          }
-        }
+        statesWhatAnEditionMayClaim(edition, title);
       }
     }
   }, 300_000);

@@ -80,8 +80,10 @@ export function readSnippet(snippet: string): string | null {
   return words === "" ? null : words;
 }
 
+/** The day an ISO timestamp opens with. */
+const A_DAY = /^(\d{4}-\d{2}-\d{2})/;
+
 /** An ISO timestamp as the day it names. */
 export function lastEdited(timestamp: string): string | null {
-  const day = /^(\d{4}-\d{2}-\d{2})/.exec(timestamp)?.[1];
-  return day ?? null;
+  return A_DAY.exec(timestamp)?.[1] ?? null;
 }

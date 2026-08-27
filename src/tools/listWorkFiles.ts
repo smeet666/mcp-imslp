@@ -176,7 +176,7 @@ function noteworthy(
     );
   }
 
-  const remarked = served.filter((edition) => edition.copyright?.remark != null).length;
+  const remarked = served.filter((edition) => (edition.copyright?.remark ?? null) !== null).length;
   if (remarked > 0) {
     notes.push(
       `Editions here qualifying their terms with a remark of the library's own: ${remarked}. ` +
