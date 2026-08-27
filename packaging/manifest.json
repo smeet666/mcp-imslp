@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "mcp-imslp",
   "display_name": "IMSLP",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "MCP server for IMSLP, the Petrucci Music Library. Read works, scores and recordings. No API key required.",
   "long_description": "Search the works and the people of IMSLP, read a work with its facets in the wording its page used, page through the editions it holds with their publishers, editors and copyright status per jurisdiction, and browse a genre, a key or an instrumentation. No API key, no account, read-only, and no score file is ever downloaded.",
   "author": {

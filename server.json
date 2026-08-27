@@ -19,12 +19,12 @@
     "url": "https://github.com/smeet666/mcp-imslp",
     "source": "github"
   },
-  "version": "0.1.0",
+  "version": "1.0.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-imslp",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "transport": {
         "type": "stdio"
       },
@@ -68,8 +68,8 @@
     },
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/smeet666/mcp-imslp/releases/download/v0.1.0/mcp-imslp-0.1.0.mcpb",
-      "version": "0.1.0",
+      "identifier": "https://github.com/smeet666/mcp-imslp/releases/download/v1.0.0/mcp-imslp-1.0.0.mcpb",
+      "version": "1.0.0",
       "transport": {
         "type": "stdio"
       }
