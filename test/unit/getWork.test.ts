@@ -233,6 +233,19 @@ describe("a work whose editions do not fit in one answer", () => {
   });
 });
 
+describe("a work whose score the library has suspended", () => {
+  it("says so in the answer that carries it", async () => {
+    const { client } = clientServing([
+      { title: "Pièce bloquée (Nadaud, Camille)", fixture: "work-blocked-file.html" },
+    ]);
+
+    const result = await runGetWork(client, { page: "Pièce bloquée (Nadaud, Camille)" });
+
+    expect(notesOf(result).join(" ")).toContain("suspended access to: 1");
+    expect(notesOf(result).join(" ")).toContain("not available");
+  });
+});
+
 describe("what the tool refuses", () => {
   it("refuses a call naming neither a page nor a page id", async () => {
     const { client } = clientServing([

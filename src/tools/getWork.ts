@@ -148,6 +148,16 @@ function noteworthy(work: Work, truncated: boolean, cached: boolean): string[] {
     );
   }
 
+  const suspended = work.editions
+    .flatMap((edition) => edition.files)
+    .filter((file) => file.blocked).length;
+  if (suspended > 0) {
+    notes.push(
+      `Files of this work the library has suspended access to: ${suspended}. IMSLP blocks a file ` +
+        "while it reviews its copyright, so it is catalogued and not available.",
+    );
+  }
+
   const restricted = new Set(work.copyright_summary.flatMap((terms) => terms.restrictions));
   if (restricted.size > 0) {
     notes.push(
@@ -228,7 +238,7 @@ function editionAsText(edition: Edition): string {
 
   const files = edition.files.map(
     (file) =>
-      `  #${file.imslp_id} ${file.description}` +
+      `  #${file.imslp_id} ${file.description}${file.blocked ? " [blocked]" : ""}` +
       `${file.pages === null ? "" : `, ${file.pages} pp.`}`,
   );
 

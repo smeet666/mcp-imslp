@@ -45,7 +45,18 @@ const FILE_ENTRY = /<div id="IMSLP(\d+)" class="([^"]*we_file[^"]*)">/g;
 const BLOCK_NUMBER = /we_fileblock_(\d+)/;
 const EDITION_TABLE = /<table class="we_edition_info/;
 
-const DESCRIPTION = /<span title="Download this file">(.*?)<\/span>\s*<\/a>/s;
+/**
+ * The name of an entry, and the state the library gives it.
+ *
+ * The link is titled "Download this file" on an ordinary entry and carries the
+ * reason for the suspension on one the library is reviewing. Reading the name
+ * through the ordinary wording lost both on the entries that matter most.
+ */
+const ENTRY_LINK =
+  /<span title="([^"]*)"><span class="we_file_dlarrwrap">.*?<\/span><\/span>(.*?)<\/span>\s*<\/a>/s;
+const AVAILABLE = "Download this file";
+/** The noun the library appends to the format of a recording. */
+const A_FILE = /\s+file$/i;
 const MEASURES = /#\d+<\/a>([^<]*)/;
 const SIZE = /([\d.]+)\s*(KB|MB|GB)/i;
 const PAGE_COUNT = /(\d+)\s*pp\./;
@@ -421,10 +432,17 @@ function readFile(id: number, body: string, pageUrl: string): WorkFile {
   const scanned = SCANNED_BY.exec(body);
   const uploadedOn = UPLOADED_ON.exec(body);
 
+  const link = ENTRY_LINK.exec(body);
+  const state = group(link, 1);
+  const format = captured(FORMAT, body)?.trim() ?? null;
+
   return {
     imslp_id: id,
-    description: text(captured(DESCRIPTION, body) ?? ""),
-    format: captured(FORMAT, body)?.trim() ?? null,
+    description: text(group(link, 2)),
+    blocked: state !== "" && state !== AVAILABLE,
+    blocked_reason: state === "" || state === AVAILABLE ? null : state,
+    format,
+    format_code: format === null ? null : format.replace(A_FILE, "").toUpperCase(),
     size_bytes: size === null ? null : bytes(size),
     pages: numberOrNull(captured(PAGE_COUNT, measures)),
     downloads: numberOrNull(captured(DOWNLOADS, body)),

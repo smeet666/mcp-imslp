@@ -221,6 +221,9 @@ describe("the files of an edition", () => {
       imslp_id: 900_002,
       description: "Complete Score",
       format: "PDF",
+      format_code: "PDF",
+      blocked: false,
+      blocked_reason: null,
       size_bytes: 1_614_807,
       pages: 24,
       downloads: 1280,
@@ -270,6 +273,67 @@ describe("the files of an edition", () => {
     expect(serialised).not.toContain("/imglnks/");
     expect(serialised).not.toContain("wiki/File:");
     expect(serialised).not.toContain("ImagefromIndex");
+  });
+});
+
+describe("a file the library has blocked", () => {
+  function blocked() {
+    const outcome = parseWorkPage(fixture("work-blocked-file.html"), {
+      ...CONTEXT,
+      pageTitle: "Pièce bloquée (Nadaud, Camille)",
+    });
+    if (outcome.kind !== "work") {
+      throw new Error("expected a work");
+    }
+    return outcome.work.editions[0]?.files[0];
+  }
+
+  it("reads its name, which the page states like any other", () => {
+    // The library marks the state on the link rather than in a field, and a
+    // reading that looked for the ordinary wording lost the name with it.
+    expect(blocked()?.description).toBe("Complete Score");
+    expect(blocked()?.pages).toBe(9);
+  });
+
+  it("says it is blocked, and why, in the library's own words", () => {
+    // IMSLP has suspended access to this file while it reviews its copyright.
+    // Served as an ordinary score, it would be reported as available.
+    expect(blocked()?.blocked).toBe(true);
+    expect(blocked()?.blocked_reason).toBe(
+      "This file is currently blocked pending copyright review",
+    );
+  });
+
+  it("says a file nobody blocked is not blocked", () => {
+    const ordinary = readFull().editions[1]?.files[0];
+
+    expect(ordinary?.blocked).toBe(false);
+    expect(ordinary?.blocked_reason).toBeNull();
+  });
+});
+
+describe("the format of a file", () => {
+  it("keeps what the page wrote, and names the format it stands for", () => {
+    // The library writes "PDF" on a score and "MP3 file" on a recording, so a
+    // caller filtering on the published word finds one and misses the other.
+    const recording = readFull().editions[0]?.files[0];
+    const score = readFull().editions[1]?.files[0];
+
+    expect(recording?.format).toBe("MP3 file");
+    expect(recording?.format_code).toBe("MP3");
+    expect(score?.format).toBe("PDF");
+    expect(score?.format_code).toBe("PDF");
+  });
+
+  it("names no format for an entry the page gives none", () => {
+    const outcome = parseWorkPage(fixture("work-sparse.html"), CONTEXT);
+    if (outcome.kind !== "work") {
+      throw new Error("expected a work");
+    }
+    const file = outcome.work.editions[0]?.files[0];
+
+    expect(file?.format).toBeNull();
+    expect(file?.format_code).toBeNull();
   });
 });
 

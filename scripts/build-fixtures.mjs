@@ -46,6 +46,7 @@ function generalInformation(rows) {
 function fileEntry({
   id,
   description,
+  blocked,
   first,
   block,
   audio,
@@ -84,7 +85,7 @@ function fileEntry({
 
   return `<div id="IMSLP${id}" class="${classes.join(" ")}">
 <div class="we_file_download plainlinks">
-<p><b><a rel="nofollow" class="external text" href="https://imslp.org/wiki/Special:ImagefromIndex/${id}"><span title="Download this file"><span class="we_file_dlarrwrap"><span class="we_file_dlarrow">&#160;</span></span>${description}</span></a></b><br />
+<p><b><a rel="nofollow" class="external text" href="https://imslp.org/wiki/Special:ImagefromIndex/${id}"><span title="${blocked ? "This file is currently blocked pending copyright review" : "Download this file"}"><span class="we_file_dlarrwrap"><span class="${blocked ? "we_file_dlarrow_blocked" : "we_file_dlarrow"}">&#160;</span></span>${description}</span></a></b>${blocked ? '<font size="1"><b> [B]</b></font>' : ""}<br />
 <span class="we_file_info2"><span class="hidden"><a href="/images/0/00/PMLP000000-invented.pdf" class="internal" title="PMLP000000-invented.pdf">*</a></span><a href="/wiki/File:PMLP000000-invented-${id}.pdf" title="File:PMLP000000-invented-${id}.pdf">#${id}</a>${measures} ${stars}${counter}<span class="ms555"> - ${credit}</span></span>
 </p>
 </div>
@@ -177,7 +178,7 @@ ${tab({
     votes: null,
     uploader: "Inventaire",
     date: "2019/3/4",
-    format: "MP3",
+    format: "MP3 file",
     scannerCode: null,
     scannerName: null,
   })}${editionTable([
@@ -558,6 +559,45 @@ const PERSON_LINKS_ONLY = `<div class="cp_outer"><div class="cp_inner">
 </div></div>
 `;
 
+/**
+ * A work whose only score the library has blocked pending a copyright review.
+ *
+ * The page names the file as it names any other, and marks the state on the
+ * link itself rather than in a field of its own.
+ */
+const BLOCKED_FILE = `${tabHeader([{ id: "tabScore1", name: "Scores", count: 1 }])}
+${tab({
+  id: "tabScore1",
+  name: "Scores",
+  type: "score",
+  body: `${fileEntry({
+    id: 900_400,
+    description: "Complete Score",
+    blocked: true,
+    first: true,
+    block: 1,
+    audio: false,
+    size: "0.11MB",
+    pages: 9,
+    downloads: null,
+    rating: null,
+    votes: null,
+    uploader: "Inventaire",
+    date: "2025/2/3",
+    format: "PDF",
+    scannerCode: null,
+    scannerName: null,
+  })}${editionTable([row("Copyright", copyrightCell("Public Domain"))])}`,
+})}
+${generalInformation([
+  row('<span class="wi_head">Work Title</span>', '<span class="wi_head">Pièce bloquée</span>'),
+  row(
+    "Composer",
+    '<a href="/wiki/Category:Nadaud,_Camille" title="Category:Nadaud, Camille">Nadaud, Camille</a>',
+  ),
+])}
+`;
+
 /** A page that stands for another one. */
 const REDIRECT = `<ol><li>REDIRECT <a href="/wiki/Trois_inventions,_Op.12_(Aubertin,_Mireille)" title="Trois inventions, Op.12 (Aubertin, Mireille)">Trois inventions, Op.12 (Aubertin, Mireille)</a>
 </li></ol>
@@ -709,6 +749,7 @@ const PAGES = {
   "work-no-composer-row.html": NO_COMPOSER_ROW,
   "work-odd-entries.html": ODD_ENTRIES,
   "work-remarked-copyright.html": REMARKED_COPYRIGHT,
+  "work-blocked-file.html": BLOCKED_FILE,
   "person.html": PERSON,
   "person-bare.html": PERSON_BARE,
   "person-links-only.html": PERSON_LINKS_ONLY,

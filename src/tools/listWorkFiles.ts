@@ -167,6 +167,15 @@ function noteworthy(
     );
   }
 
+  const suspended = served.flatMap((edition) => edition.files).filter((file) => file.blocked);
+  if (suspended.length > 0) {
+    notes.push(
+      `Files here the library has suspended access to: ${suspended.length}. IMSLP blocks a file ` +
+        "while it reviews its copyright, so these are listed and not available. Each carries the " +
+        "reason on 'blocked_reason'.",
+    );
+  }
+
   const remarked = served.filter((edition) => edition.copyright?.remark != null).length;
   if (remarked > 0) {
     notes.push(
@@ -208,7 +217,7 @@ function editionAsText(edition: Edition): string {
 
   const files = edition.files.map(
     (file) =>
-      `  #${file.imslp_id} ${file.description}` +
+      `  #${file.imslp_id} ${file.description}${file.blocked ? " [blocked]" : ""}` +
       `${file.format === null ? "" : ` [${file.format}]`}` +
       `${file.pages === null ? "" : `, ${file.pages} pp.`}` +
       `${file.downloads === null ? "" : `, ${file.downloads} downloads`}`,

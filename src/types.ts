@@ -59,7 +59,25 @@ export interface CopyrightSummary extends Copyright {
 export interface WorkFile {
   imslp_id: number;
   description: string;
+  /**
+   * True when IMSLP has suspended access to the file.
+   *
+   * The library marks a file it is reviewing on the link itself rather than in
+   * a field of its own. Served as an ordinary entry, such a file would be
+   * reported as available while the library has stopped serving it.
+   */
+  blocked: boolean;
+  /** What the library says about the suspension, as published. */
+  blocked_reason: string | null;
+  /** The format as the page writes it: "PDF" on a score, "MP3 file" on a recording. */
   format: string | null;
+  /**
+   * The same format without the noun the library appends to a recording.
+   *
+   * "MP3 file" and "PDF" are one field written two ways, so a caller filtering
+   * on what the page printed finds the scores and misses the recordings.
+   */
+  format_code: string | null;
   size_bytes: number | null;
   pages: number | null;
   /** Null when the entry prints no counter, which is not a count of zero. */

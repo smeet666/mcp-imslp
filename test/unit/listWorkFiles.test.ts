@@ -188,6 +188,19 @@ describe("terms the library qualified with a remark", () => {
   });
 });
 
+describe("a file the library has suspended", () => {
+  it("says so, rather than serving it among the ordinary entries", async () => {
+    const client = clientServing("Pièce bloquée (Nadaud, Camille)", "work-blocked-file.html");
+
+    const result = await runListWorkFiles(client, { page: "Pièce bloquée (Nadaud, Camille)" });
+
+    expect(notesOf(result).join(" ")).toContain("blocked");
+    expect(result.content[0]?.text).toContain("[blocked]");
+    const editions = structured(result).editions as { files: { blocked: boolean }[] }[];
+    expect(editions[0]?.files[0]?.blocked).toBe(true);
+  });
+});
+
 describe("a work page holding nothing yet", () => {
   it("says the page holds no edition rather than serving an empty list alone", async () => {
     const client = clientServing("Œuvre sans fichier (Nadaud, Camille)", "work-no-files.html");

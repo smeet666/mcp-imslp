@@ -33,7 +33,27 @@ export const copyrightSchema = z.object({
 export const fileSchema = z.object({
   imslp_id: z.number().int(),
   description: z.string().describe("What the entry is called, for example 'Complete Score'."),
-  format: z.string().nullable(),
+  blocked: z
+    .boolean()
+    .describe(
+      "True when IMSLP has suspended access to this file, which it does while reviewing the " +
+        "copyright of one. Never report such a file as available.",
+    ),
+  blocked_reason: z
+    .string()
+    .nullable()
+    .describe("What the library says about the suspension, as published. Null when none applies."),
+  format: z
+    .string()
+    .nullable()
+    .describe("The format as the page writes it: 'PDF' on a score, 'MP3 file' on a recording."),
+  format_code: z
+    .string()
+    .nullable()
+    .describe(
+      "The same format without the noun the library appends to a recording: 'PDF', 'MP3', 'MID', " +
+        "'ZIP', 'FLAC', 'MP4'. Filter on this rather than on the published wording.",
+    ),
   size_bytes: z.number().int().nullable(),
   pages: z.number().int().nullable(),
   downloads: z
