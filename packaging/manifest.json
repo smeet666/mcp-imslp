@@ -1,0 +1,80 @@
+{
+  "manifest_version": "0.3",
+  "name": "mcp-imslp",
+  "display_name": "IMSLP",
+  "version": "0.1.0",
+  "description": "MCP server for IMSLP, the Petrucci Music Library. Read works, scores and recordings. No API key required.",
+  "long_description": "Search the works and the people of IMSLP, read a work with its facets in the wording its page used, page through the editions it holds with their publishers, editors and copyright status per jurisdiction, and browse a genre, a key or an instrumentation. No API key, no account, read-only, and no score file is ever downloaded.",
+  "author": {
+    "name": "Damien Bouissou",
+    "url": "https://github.com/smeet666"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smeet666/mcp-imslp.git"
+  },
+  "homepage": "https://github.com/smeet666/mcp-imslp#readme",
+  "documentation": "https://github.com/smeet666/mcp-imslp#readme",
+  "support": "https://github.com/smeet666/mcp-imslp/issues",
+  "icon": "assets/icon-512.png",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "model-context-protocol",
+    "mcp-server",
+    "imslp",
+    "petrucci",
+    "sheet-music",
+    "score",
+    "scores",
+    "classical-music",
+    "public-domain",
+    "music",
+    "no-api-key"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"]
+    }
+  },
+  "tools": [
+    {
+      "name": "search_works",
+      "description": "Search the works of IMSLP by title, by composer, or by words printed on their pages."
+    },
+    {
+      "name": "search_people",
+      "description": "Find the composers, editors, arrangers and performers of IMSLP by name."
+    },
+    {
+      "name": "get_work",
+      "description": "Read one work: its titles, composer, catalogue numbers, dates, key, instrumentation and the terms its scores are published under."
+    },
+    {
+      "name": "list_work_files",
+      "description": "Read the scores and recordings a work holds, edition by edition, with the copyright status of each."
+    },
+    {
+      "name": "list_person_works",
+      "description": "Read the works IMSLP files under a person, as a composer, an editor, an arranger or a performer."
+    },
+    {
+      "name": "get_person",
+      "description": "Read what IMSLP holds about a person: the name its page prints, the life dates it states, and the registers holding a record of them."
+    },
+    {
+      "name": "browse_category",
+      "description": "Read the works IMSLP files under a genre, a key, an instrumentation or a period."
+    }
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=24.0.0"
+    }
+  }
+}
