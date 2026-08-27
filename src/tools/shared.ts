@@ -1,5 +1,6 @@
 /** Pieces shared by the tools: result shapes, error mapping, text mirrors. */
 
+import type { ErrorCode, ErrorDetails } from "../errors.js";
 import { ImslpError } from "../errors.js";
 
 /** Many MCP clients render only the text block, so it must read on its own. */
@@ -105,15 +106,46 @@ export function ok(
  * Error results carry no structuredContent: the SDK validates it against the
  * tool's declared output schema, which an error payload does not satisfy.
  */
+/** The six codes, and the only ones a failure may open with. */
+const CODES = new Set<ErrorCode>([
+  "not_found",
+  "invalid_input",
+  "rate_limited",
+  "parse_failure",
+  "network_error",
+  "timeout",
+]);
+
+/**
+ * The code a failure already carries, whatever built it.
+ *
+ * A program importing this package and its published client subpath holds two
+ * copies of the error class, and a failure crossing between them is the same
+ * failure written by another constructor. Reading the code it carries rather
+ * than its class keeps the vocabulary intact, and a code the taxonomy never
+ * named is not trusted.
+ */
+function statedCode(error: unknown): ErrorCode | null {
+  if (error instanceof ImslpError) {
+    return error.code;
+  }
+  const stated = (error as { code?: unknown } | null)?.code;
+  return typeof stated === "string" && CODES.has(stated as ErrorCode)
+    ? (stated as ErrorCode)
+    : null;
+}
+
 export function toToolError(error: unknown): ToolResult {
   // An error the taxonomy never named is a defect in this server, and
   // `network_error` would invite a caller to try again against a site that was
   // never the problem. `parse_failure` is the code for an answer this server
   // could not turn into a result, which is what happened.
+  const code = statedCode(error);
+  const message = error instanceof Error ? error.message : String(error);
   const known =
-    error instanceof ImslpError
-      ? error
-      : new ImslpError("parse_failure", error instanceof Error ? error.message : String(error));
+    code === null
+      ? new ImslpError("parse_failure", message)
+      : new ImslpError(code, message, { ...((error as { details?: ErrorDetails }).details ?? {}) });
 
   // Both lines are written by this server, so nothing quoted inside them may
   // start a line of its own and be read as one.

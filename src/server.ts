@@ -94,6 +94,9 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
         "Start at search_works to find the page of a work, or at search_people to find the " +
         "category a person is addressed by. A work is addressed by the title of its page, which " +
         "is written 'Work (Composer)', for example 'Nocturnes, Op.9 (Chopin, Frédéric)'. " +
+        "A work is titled in the language its composer used, so a title translated into another " +
+        "language finds little or nothing: read a thin answer as a title in the wrong language " +
+        "before reading it as a work the library does not hold. " +
         "The library publishes no count of what a search matched or of what a category holds, so " +
         "no answer states one; each says instead whether more rows remained and how to read them. " +
         "list_person_works reads what a person wrote, get_person reads the person, and " +

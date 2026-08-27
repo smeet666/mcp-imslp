@@ -31,6 +31,10 @@ export const searchWorksDescription = [
   "A snippet is words taken from the page around the match. The library writes its pages in",
   "wikitext, so a snippet sometimes shows the name of a file rather than a sentence, and some rows",
   "carry none at all.",
+  "The library titles a work in the language its composer used, so 'Die Zauberflöte' and not 'The",
+  "Magic Flute', 'Sinfonia' and not 'Symphony'. A title translated into another language finds",
+  "nothing, or finds only the works written about it: rows that look thin for a famous work are a",
+  "sign the work sits under its original title, not that the library lacks it.",
   "Searching for a person by name finds the works naming them; search_people finds the person.",
   "When you show a result to a user, credit IMSLP and link the page.",
 ].join(" ");

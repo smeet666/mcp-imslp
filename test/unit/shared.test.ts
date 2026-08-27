@@ -97,6 +97,36 @@ describe("a failure", () => {
     expect(result.content[0]?.text).toContain("[parse_failure]");
   });
 
+  it("keeps the code of an error carrying one, whatever built it", () => {
+    // A program importing both this package and its client subpath holds two
+    // copies of the error class, and an error crossing between them is the same
+    // failure written by another constructor. Deciding by the class alone would
+    // report every one of those as an answer this server could not read.
+    const fromAnotherCopy = Object.assign(new Error("IMSLP has nothing at that address."), {
+      code: "not_found",
+      details: { hint: "Try a title." },
+    });
+
+    const result = toToolError(fromAnotherCopy);
+
+    expect(result.content[0]?.text).toContain("[not_found]");
+    expect(result.content[0]?.text).toContain("Hint: Try a title.");
+  });
+
+  it("keeps a code carried without any detail beside it", () => {
+    const bare = Object.assign(new Error("The call was abandoned."), { code: "timeout" });
+
+    const result = toToolError(bare);
+
+    expect(result.content[0]?.text).toBe("[timeout] The call was abandoned.");
+  });
+
+  it("refuses to trust a code the taxonomy never named", () => {
+    const forged = Object.assign(new Error("nothing to see"), { code: "everything_is_fine" });
+
+    expect(toToolError(forged).content[0]?.text).toContain("[parse_failure]");
+  });
+
   it("reads a thrown value that is not an error at all", () => {
     expect(toToolError("nothing thrown properly").content[0]?.text).toContain("[parse_failure]");
   });
