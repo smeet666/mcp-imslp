@@ -106,6 +106,39 @@ export interface WorkSection {
   files: number;
 }
 
+/** A person, as the page catalogueing them holds it. */
+export interface Person {
+  /** The category they are addressed by, which list_person_works takes. */
+  category: string;
+  /** The name without the category prefix, as the library files them. */
+  catalogued_as: string;
+  /** The name as the page prints it, which reads forename first. */
+  name: string;
+  /** The dates beside the name, exactly as published. */
+  life_dates: string | null;
+  /**
+   * The other names the library files them under, as the line was published.
+   *
+   * The line separates its names with commas, and a name written surname first
+   * carries one of its own: "Aubertin, Mireille Jeanne" is one person written
+   * two ways at once. Nothing on the page tells the two apart, so the line is
+   * kept whole rather than cut where a comma happens to fall.
+   */
+  alternative_names: string | null;
+  aliases: string | null;
+  authorities: Authority[];
+  external_links: Link[];
+  page_url: string;
+  source: "IMSLP";
+  license: "CC BY-SA 4.0";
+}
+
+/** One member of a category: a work page the library filed under it. */
+export interface CategoryMember {
+  pageid: number;
+  title: string;
+}
+
 /** A work, as its page holds it. */
 export interface Work {
   title: string;

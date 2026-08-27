@@ -12,10 +12,11 @@ import {
   loadConfig,
   withProjectIdentity,
 } from "../config.js";
-import { notFound, parseFailure } from "../errors.js";
-import type { Work } from "../types.js";
+import { invalidInput, notFound, parseFailure } from "../errors.js";
+import type { CategoryMember, Person, Work } from "../types.js";
 import { TtlLruCache } from "./cache.js";
 import { fetchJson, givenUp } from "./http.js";
+import { parsePersonPage } from "./parsePerson.js";
 import { parseWorkPage } from "./parseWork.js";
 import { RateLimiter } from "./rateLimiter.js";
 import { apiUrl } from "./urls.js";
@@ -40,6 +41,69 @@ interface InFlightRead {
   /** Fires when the last caller interested in this read has gone. */
   controller: AbortController;
   waiting: number;
+}
+
+/** One row of a search, as the API states it. */
+export interface SearchRow {
+  /** 0 for the page of a work, 14 for the category of a person. */
+  ns: number;
+  title: string;
+  /** Wikitext around the matched words, empty on rows the search summarised with none. */
+  snippet: string;
+  size: number;
+  wordcount: number;
+  timestamp: string;
+}
+
+/**
+ * One page of a search.
+ *
+ * `nextOffset` is the offset the API named to continue from, and null when it
+ * named none. There is no count of matches here because IMSLP publishes none,
+ * whatever is asked of it.
+ */
+export interface SearchPage {
+  rows: SearchRow[];
+  nextOffset: number | null;
+}
+
+interface SearchResponse {
+  query?: { search?: SearchRow[] };
+  "query-continue"?: { search?: { sroffset?: number } };
+  error?: { code?: string; info?: string };
+}
+
+/**
+ * One page of a category listing.
+ *
+ * `cursor` is the opaque continuation the API named, and null when it named
+ * none. There is no count of members here because IMSLP publishes none.
+ */
+export interface CategoryPage {
+  members: CategoryMember[];
+  cursor: string | null;
+}
+
+interface CategoryResponse {
+  query?: { categorymembers?: CategoryMember[] };
+  "query-continue"?: { categorymembers?: { cmcontinue?: string } };
+  error?: { code?: string; info?: string };
+}
+
+export interface CategoryInput {
+  /** The category, with or without its prefix. */
+  category: string;
+  limit: number;
+  /** The continuation a previous reading named, when there was one. */
+  cursor?: string;
+}
+
+export interface SearchInput {
+  query: string;
+  /** 0 searches the pages of works, 14 the categories people are addressed by. */
+  namespace: number;
+  limit: number;
+  offset: number;
 }
 
 /** A page, named either by its title or by the number the site gives it. */
@@ -178,6 +242,109 @@ export class ImslpClient {
       );
     }
     return { data: followed.work, cached: first.cached && second.cached };
+  }
+
+  /**
+   * Search the wiki, over one namespace.
+   *
+   * A query of nothing but spaces is refused rather than sent: the site answers
+   * it with rows of its own choosing, which would read as the answer to a
+   * search nobody made.
+   */
+  async search(input: SearchInput, signal?: AbortSignal): Promise<Read<SearchPage>> {
+    const query = input.query.trim();
+    if (query === "") {
+      throw invalidInput(
+        "A search needs something to search for, and this call passes an empty query.",
+        "Pass a title, a composer, or words printed on the page.",
+      );
+    }
+
+    const url = apiUrl({
+      action: "query",
+      list: "search",
+      srsearch: query,
+      srnamespace: input.namespace,
+      srlimit: input.limit,
+      sroffset: input.offset,
+      srprop: "snippet|size|wordcount|timestamp",
+    });
+
+    return await this.read<SearchPage>(url, signal, (payload) => {
+      const parsed = payload as SearchResponse;
+      if (parsed.error) {
+        throw asStated(parsed.error, url, `a search for "${query}"`);
+      }
+      const rows = parsed.query?.search;
+      if (rows === undefined) {
+        throw parseFailure(url, `no results block for a search for "${query}"`);
+      }
+      return { data: { rows, nextOffset: parsed["query-continue"]?.search?.sroffset ?? null } };
+    });
+  }
+
+  /**
+   * The works a category holds, a page at a time.
+   *
+   * The library files a work under its composer and under every genre, key and
+   * instrumentation it belongs to, so one route answers what a person wrote and
+   * what is written for an instrument. Only the pages of works are read: the
+   * subcategories a category also holds are not works.
+   */
+  async categoryMembers(input: CategoryInput, signal?: AbortSignal): Promise<Read<CategoryPage>> {
+    const category = input.category.trim();
+    if (category === "") {
+      throw invalidInput(
+        "A listing needs a category, and this call passes an empty one.",
+        "A person is written 'Category:Surname, Forename'; search_people finds the exact name.",
+      );
+    }
+
+    const titled = category.startsWith("Category:") ? category : `Category:${category}`;
+    const url = apiUrl({
+      action: "query",
+      list: "categorymembers",
+      cmtitle: titled,
+      cmnamespace: 0,
+      cmlimit: input.limit,
+      cmprop: "ids|title",
+      ...(input.cursor === undefined ? {} : { cmcontinue: input.cursor }),
+    });
+
+    return await this.read<CategoryPage>(url, signal, (payload) => {
+      const parsed = payload as CategoryResponse;
+      if (parsed.error) {
+        throw asStated(parsed.error, url, `"${titled}"`);
+      }
+      const members = parsed.query?.categorymembers;
+      if (members === undefined) {
+        throw parseFailure(url, `no members block for "${titled}"`);
+      }
+      return {
+        data: { members, cursor: parsed["query-continue"]?.categorymembers?.cmcontinue ?? null },
+      };
+    });
+  }
+
+  /**
+   * One person, read from the page catalogueing them.
+   *
+   * A person is addressed by a category, and the page of that category is what
+   * the library writes about them.
+   */
+  async getPerson(category: string, signal?: AbortSignal): Promise<Read<Person>> {
+    const titled = category.trim().startsWith("Category:")
+      ? category.trim()
+      : `Category:${category.trim()}`;
+    const page = await this.renderPage({ page: titled }, signal);
+
+    return {
+      data: parsePersonPage(page.data.html, {
+        category: page.data.title,
+        url: apiUrl({ action: "parse", prop: "text", page: titled }),
+      }),
+      cached: page.cached,
+    };
   }
 
   /**

@@ -1,0 +1,26 @@
+{
+ "query": {
+  "categorymembers": [
+   {
+    "pageid": 900000,
+    "ns": 0,
+    "title": "Three Inventions (Aubertin, Mireille)"
+   },
+   {
+    "pageid": 900010,
+    "ns": 0,
+    "title": "Petite pièce (Nadaud, Camille)"
+   },
+   {
+    "pageid": 900020,
+    "ns": 0,
+    "title": "Requiem"
+   }
+  ]
+ },
+ "query-continue": {
+  "categorymembers": {
+   "cmcontinue": "page|54485245457e7e4155424552544954"
+  }
+ }
+}

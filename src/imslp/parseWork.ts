@@ -8,6 +8,7 @@
  */
 
 import { parseFailure } from "../errors.js";
+import { readAuthorities } from "./authorities.js";
 import { captured, fieldValue, group, links, startOf, tableRows, text } from "./html.js";
 import type {
   Authority,
@@ -58,6 +59,9 @@ const SCANNED_BY = /scanned by.*?title="([^"]*)"[^>]*>([^<]*)</s;
 
 /** An address that leaves the site, which is what an external link is. */
 const OFF_SITE = /^https?:/i;
+
+/** A work page separates the registers it names with semicolons. */
+const SEMICOLONS = /;/;
 
 const UNIT_BYTES = { KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 } as const;
 
@@ -154,7 +158,7 @@ export function parseWorkPage(html: string, context: WorkPageContext): WorkPage 
       extra_information: facets.extra_information ?? null,
       genre_categories: readGenres(html),
       external_links: readLinkField(html, "External Links"),
-      authorities: readAuthorities(html),
+      authorities: readAuthorityRow(html),
       copyright_summary: summariseCopyright(editions),
       sections,
       editions,
@@ -251,28 +255,13 @@ function readLinkField(html: string, name: string): Link[] {
  * of two ways: a register linked on its own, or the name of a register linked
  * to the article explaining it, then the identifier linked to the register.
  */
-function readAuthorities(html: string): Authority[] {
+function readAuthorityRow(html: string): Authority[] {
   for (const row of tableRows(html)) {
-    if (row.name !== "Authorities") {
-      continue;
+    if (row.name === "Authorities") {
+      return readAuthorities(row.html, SEMICOLONS);
     }
-    return row.html
-      .split(";")
-      .map((entry) => readAuthority(entry))
-      .filter((entry): entry is Authority => entry !== null);
   }
   return [];
-}
-
-function readAuthority(entry: string): Authority | null {
-  const [named, identifier] = links(entry);
-  if (!named) {
-    return null;
-  }
-  if (identifier) {
-    return { authority: named.label, id: identifier.label, url: identifier.href };
-  }
-  return { authority: named.label, id: null, url: named.href };
 }
 
 /**

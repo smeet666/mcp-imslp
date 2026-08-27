@@ -502,6 +502,62 @@ ${generalInformation([
 ])}
 `;
 
+/**
+ * The page of a person, as the library writes it.
+ *
+ * A person's page carries no table: the name and the life dates open it, and
+ * the lines below are introduced by a symbol rather than by a label cell.
+ */
+const PERSON = `<div class="cp_outer"><div class="cp_inner"><div class="cp_img">
+<div class="floatnone"><a href="/wiki/File:Invented.jpg" class="image" title="Mireille Aubertin (1861–1934)"><img alt="Mireille Aubertin" src="/images/thumb/0/00/Invented.jpg/180px-Invented.jpg" width="180" height="300" /></a></div>
+</div>
+<div class="cp_firsth">
+<h2> <span class="mw-headline" id="Mireille_Aubertin">Mireille Aubertin </span></h2>(4 March 1861 — 2 November 1934)
+</div>
+<div class="plainlinks cp_mainlinks">
+<div class="cp_symbol">＝</div> <span style="font-weight:normal">Alternative Names/Transliterations: Mireille Aubertin-Nadaud, M. Aubertin</span><br />
+<div class="cp_symbol">＝</div> <span style="font-weight:normal">Name in Other Languages: <span title="de">Mireille Aubertin</span>, <span title="ru">Мирей Обертен</span></span><br />
+<div class="cp_symbol">＝</div> <span style="font-weight:normal">Aliases: <span title="fr">Aubertin, Mireille Jeanne</span></span><br />
+<div class="cp_symbol">＝</div> <span style="font-weight:normal">Authorities - <a rel="nofollow" class="external text" href="https://example.invalid/worldcat/2">WorldCat</a>, <a href="http://en.wikipedia.org/wiki/Virtual_International_Authority_File" class="extiw" title="wikipedia:Virtual International Authority File">VIAF</a>: <a rel="nofollow" class="external text" href="https://example.invalid/viaf/900001">900001</a>, <a href="http://en.wikipedia.org/wiki/Biblioth%C3%A8que_nationale_de_France" class="extiw" title="wikipedia:Bibliothèque nationale de France">BNF</a>: <a rel="nofollow" class="external text" href="https://example.invalid/bnf/900001x">900001x</a></span><br />
+<div class="cp_symbol">✕</div> <a href="/wiki/Special:CategoryWalker/Aubertin,_Mireille/" title="Special:CategoryWalker/Aubertin, Mireille/">Show works by type/instrument</a><br />
+</div>
+<h2 class="cp_h"> <span class="mw-headline" id="External_links">External links</span></h2>
+<div class="cp_links">
+<ul><li>Detailed biography: <a rel="nofollow" class="external text" href="https://example.invalid/biography">A biography</a></li>
+<li>Recordings: <a rel="nofollow" class="external text" href="https://example.invalid/recordings">Somewhere</a></li>
+<li>Her category: <a href="/wiki/Category:Aubertin,_Mireille" title="Category:Aubertin, Mireille">on this site</a></li></ul>
+</div>
+</div></div>
+<script>JGINITadjhead={"type":2,"composer":"Aubertin, Mireille","link":"https://app0.example.invalid/x"};</script>
+`;
+
+/**
+ * A person the library states nothing about beyond a name.
+ *
+ * Its block of lines carries an aliases line with nothing after the label,
+ * which the page writes for someone it holds no other name for.
+ */
+const PERSON_BARE = `<div class="cp_outer"><div class="cp_inner">
+<div class="cp_firsth">
+<h2> <span class="mw-headline" id="Camille_Nadaud">Camille Nadaud </span></h2>
+</div>
+<div class="plainlinks cp_mainlinks">
+<div class="cp_symbol">＝</div> <span style="font-weight:normal">Aliases: </span><br />
+</div>
+</div></div>
+`;
+
+/** A person whose page ends on its links, with no script after them. */
+const PERSON_LINKS_ONLY = `<div class="cp_outer"><div class="cp_inner">
+<div class="cp_firsth">
+<h2> <span class="mw-headline" id="Jeanne_Roux">Jeanne Roux </span></h2>(1899—1975)
+</div>
+<div class="cp_links">
+<ul><li>Detailed biography: <a rel="nofollow" class="external text" href="https://example.invalid/roux">A biography</a></li></ul>
+</div>
+</div></div>
+`;
+
 /** A page that stands for another one. */
 const REDIRECT = `<ol><li>REDIRECT <a href="/wiki/Trois_inventions,_Op.12_(Aubertin,_Mireille)" title="Trois inventions, Op.12 (Aubertin, Mireille)">Trois inventions, Op.12 (Aubertin, Mireille)</a>
 </li></ol>
@@ -509,6 +565,140 @@ const REDIRECT = `<ol><li>REDIRECT <a href="/wiki/Trois_inventions,_Op.12_(Auber
 
 /** A page holding nothing this parser recognises. */
 const EMPTY = "<p>Javascript is required to submit files.</p>\n";
+
+/**
+ * What a search answers with.
+ *
+ * The API states the rows and, when more remain, the offset to continue from.
+ * It publishes no total, whatever is asked of it, so nothing here carries one.
+ * A snippet arrives as wikitext with the matched words wrapped, and some rows
+ * carry none at all.
+ */
+const SEARCH_WORKS = {
+  query: {
+    search: [
+      {
+        ns: 0,
+        title: "Three Inventions (Aubertin, Mireille)",
+        snippet:
+          "|File Name 1=PMLP000000-aubertin-<span class='searchmatch'>inventions</span>.pdf\n" +
+          "|File Name 2=PMLP000000-aubertin-<span class='searchmatch'>inventions</span>-parts.pdf\n",
+        size: 9637,
+        wordcount: 1175,
+        timestamp: "2025-05-28T12:16:47Z",
+      },
+      {
+        ns: 0,
+        title: "Petite pièce (Nadaud, Camille)",
+        snippet: "",
+        size: 50,
+        wordcount: 5,
+        timestamp: "2009-03-08T14:07:21Z",
+      },
+      {
+        ns: 0,
+        title: "Requiem",
+        snippet: "a work whose title names no composer",
+        size: 120,
+        wordcount: 20,
+        timestamp: "2018-01-02T03:04:05Z",
+      },
+    ],
+  },
+  "query-continue": { search: { sroffset: 3 } },
+};
+
+const SEARCH_PEOPLE = {
+  query: {
+    search: [
+      {
+        ns: 14,
+        title: "Category:Nadaud, Camille",
+        snippet: "<span class='searchmatch'>Nadaud</span>, Camille (1861-1934)",
+        size: 420,
+        wordcount: 60,
+        timestamp: "2024-02-03T04:05:06Z",
+      },
+      {
+        ns: 14,
+        title: "Category:Nadaud, C.",
+        snippet: "#REDIRECT [[:Category:<span class='searchmatch'>Nadaud</span>, Camille]]",
+        size: 42,
+        wordcount: 6,
+        timestamp: "2010-08-21T02:58:18Z",
+      },
+    ],
+  },
+};
+
+/** A search the library answers with nothing. */
+const SEARCH_EMPTY = { query: { search: [] } };
+
+/**
+ * A row the search states without the fields the others carry.
+ *
+ * The timestamp of a page is written by the wiki, and a row whose stamp is not
+ * a date leaves the day unknown rather than making one up.
+ */
+const SEARCH_ODD = {
+  query: {
+    search: [
+      {
+        ns: 0,
+        title: "Sans date (Nadaud, Camille)",
+        snippet: "",
+        size: 10,
+        wordcount: 2,
+        timestamp: "",
+      },
+    ],
+  },
+};
+
+/** What the API answers when it refuses the search itself. */
+const SEARCH_REFUSED = { error: { code: "srsearch-error", info: "Search failed" } };
+
+/** An answer carrying no results block at all. */
+const SEARCH_SHAPELESS = { query: {} };
+
+/**
+ * What a listing of a category answers with.
+ *
+ * The API states the members and, when more remain, an opaque cursor to
+ * continue from. It publishes no count of the members a category holds.
+ */
+const CATEGORY_MEMBERS = {
+  query: {
+    categorymembers: [
+      { pageid: 900_000, ns: 0, title: "Three Inventions (Aubertin, Mireille)" },
+      { pageid: 900_010, ns: 0, title: "Petite pièce (Nadaud, Camille)" },
+      { pageid: 900_020, ns: 0, title: "Requiem" },
+    ],
+  },
+  "query-continue": { categorymembers: { cmcontinue: "page|54485245457e7e4155424552544954" } },
+};
+
+/** The last page of a listing, which names no cursor to continue from. */
+const CATEGORY_LAST_PAGE = {
+  query: {
+    categorymembers: [{ pageid: 900_030, ns: 0, title: "Dernière pièce (Nadaud, Camille)" }],
+  },
+};
+
+/** A category the library holds nothing in, or does not hold at all. */
+const CATEGORY_EMPTY = { query: { categorymembers: [] } };
+
+const PAYLOADS = {
+  "search-works.json": SEARCH_WORKS,
+  "search-people.json": SEARCH_PEOPLE,
+  "search-empty.json": SEARCH_EMPTY,
+  "search-odd.json": SEARCH_ODD,
+  "search-refused.json": SEARCH_REFUSED,
+  "search-shapeless.json": SEARCH_SHAPELESS,
+  "category-members.json": CATEGORY_MEMBERS,
+  "category-last-page.json": CATEGORY_LAST_PAGE,
+  "category-empty.json": CATEGORY_EMPTY,
+};
 
 const PAGES = {
   "work-full.html": FULL,
@@ -519,6 +709,9 @@ const PAGES = {
   "work-no-composer-row.html": NO_COMPOSER_ROW,
   "work-odd-entries.html": ODD_ENTRIES,
   "work-remarked-copyright.html": REMARKED_COPYRIGHT,
+  "person.html": PERSON,
+  "person-bare.html": PERSON_BARE,
+  "person-links-only.html": PERSON_LINKS_ONLY,
   "work-redirect.html": REDIRECT,
   "work-empty.html": EMPTY,
 };
@@ -527,4 +720,8 @@ mkdirSync(OUT, { recursive: true });
 for (const [name, body] of Object.entries(PAGES)) {
   writeFileSync(join(OUT, name), body, "utf8");
 }
-process.stdout.write(`wrote ${Object.keys(PAGES).length} fixtures to ${OUT}\n`);
+for (const [name, payload] of Object.entries(PAYLOADS)) {
+  writeFileSync(join(OUT, name), `${JSON.stringify(payload, null, 1)}\n`, "utf8");
+}
+const written = Object.keys(PAGES).length + Object.keys(PAYLOADS).length;
+process.stdout.write(`wrote ${written} fixtures to ${OUT}\n`);

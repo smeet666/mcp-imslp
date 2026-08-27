@@ -1,0 +1,22 @@
+{
+ "query": {
+  "search": [
+   {
+    "ns": 14,
+    "title": "Category:Nadaud, Camille",
+    "snippet": "<span class='searchmatch'>Nadaud</span>, Camille (1861-1934)",
+    "size": 420,
+    "wordcount": 60,
+    "timestamp": "2024-02-03T04:05:06Z"
+   },
+   {
+    "ns": 14,
+    "title": "Category:Nadaud, C.",
+    "snippet": "#REDIRECT [[:Category:<span class='searchmatch'>Nadaud</span>, Camille]]",
+    "size": 42,
+    "wordcount": 6,
+    "timestamp": "2010-08-21T02:58:18Z"
+   }
+  ]
+ }
+}

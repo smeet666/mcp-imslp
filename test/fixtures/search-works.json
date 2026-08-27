@@ -1,0 +1,35 @@
+{
+ "query": {
+  "search": [
+   {
+    "ns": 0,
+    "title": "Three Inventions (Aubertin, Mireille)",
+    "snippet": "|File Name 1=PMLP000000-aubertin-<span class='searchmatch'>inventions</span>.pdf\n|File Name 2=PMLP000000-aubertin-<span class='searchmatch'>inventions</span>-parts.pdf\n",
+    "size": 9637,
+    "wordcount": 1175,
+    "timestamp": "2025-05-28T12:16:47Z"
+   },
+   {
+    "ns": 0,
+    "title": "Petite pièce (Nadaud, Camille)",
+    "snippet": "",
+    "size": 50,
+    "wordcount": 5,
+    "timestamp": "2009-03-08T14:07:21Z"
+   },
+   {
+    "ns": 0,
+    "title": "Requiem",
+    "snippet": "a work whose title names no composer",
+    "size": 120,
+    "wordcount": 20,
+    "timestamp": "2018-01-02T03:04:05Z"
+   }
+  ]
+ },
+ "query-continue": {
+  "search": {
+   "sroffset": 3
+  }
+ }
+}

@@ -18,11 +18,11 @@ const SPACES = /[ \t ]+/g;
  * The group of a match, as text.
  *
  * A group that took part in the match holds its text, and one that did not
- * holds nothing: an optional group of a pattern that matched around it reads as
- * the empty text rather than as a failure to match.
+ * holds nothing: an optional group of a pattern that matched around it, and a
+ * pattern that matched nowhere at all, both read as the empty text.
  */
-export function group(match: RegExpMatchArray | RegExpExecArray, at: number): string {
-  return match[at] ?? "";
+export function group(match: RegExpMatchArray | RegExpExecArray | null, at: number): string {
+  return match?.[at] ?? "";
 }
 
 /**

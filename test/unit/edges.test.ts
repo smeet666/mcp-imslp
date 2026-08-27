@@ -245,9 +245,11 @@ describe("where a match begins", () => {
 
 describe("the group of a match", () => {
   it("reads a group that did not take part as empty", () => {
-    const match = /a(b)?/.exec("a");
+    expect(group(/a(b)?/.exec("a"), 1)).toBe("");
+  });
 
-    expect(match === null ? "unmatched" : group(match, 1)).toBe("");
+  it("reads a pattern that matched nowhere as empty too", () => {
+    expect(group(/(z)/.exec("a"), 1)).toBe("");
   });
 });
 
@@ -329,6 +331,100 @@ describe("calling the second tool through the protocol", () => {
     });
 
     expect((result.structuredContent as { returned?: number }).returned).toBe(1);
+    await server.close();
+  });
+});
+
+describe("calling the searches through the protocol", () => {
+  it("answers a host that searches for a work and for a person", async () => {
+    const payloads = ["search-works.json", "search-people.json"];
+    let at = 0;
+    const server = createServer({
+      config: loadConfig({}),
+      logger: createLogger("silent"),
+      fetchImpl: (async () => {
+        const name = payloads[Math.min(at, payloads.length - 1)] ?? "search-works.json";
+        at += 1;
+        return Response.json(JSON.parse(fixture(name)));
+      }) as unknown as typeof fetch,
+    });
+    const client = new Client({ name: "test", version: "0.0.0" });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+
+    const works = await client.callTool({
+      name: "search_works",
+      arguments: { query: "inventions" },
+    });
+    const people = await client.callTool({ name: "search_people", arguments: { query: "nadaud" } });
+
+    expect((works.structuredContent as { returned?: number }).returned).toBe(3);
+    expect((people.structuredContent as { returned?: number }).returned).toBe(2);
+    await server.close();
+  });
+});
+
+describe("calling the listings and the person through the protocol", () => {
+  /**
+   * One call per host, each with its own server.
+   *
+   * Calls made through one server queue behind the pacing it owes IMSLP, so
+   * three of them in a row would be a test measuring a wait rather than an
+   * answer.
+   */
+  async function hostFor(payload: () => Response) {
+    const server = createServer({
+      config: loadConfig({}),
+      logger: createLogger("silent"),
+      fetchImpl: (async () => payload()) as unknown as typeof fetch,
+    });
+    const client = new Client({ name: "test", version: "0.0.0" });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+    return { client, server };
+  }
+
+  it("answers a host that asks for the works of a person", async () => {
+    const { client, server } = await hostFor(() =>
+      Response.json(JSON.parse(fixture("category-members.json"))),
+    );
+
+    const result = await client.callTool({
+      name: "list_person_works",
+      arguments: { category: "Category:Aubertin, Mireille" },
+    });
+
+    expect((result.structuredContent as { returned?: number }).returned).toBe(3);
+    await server.close();
+  });
+
+  it("answers a host that asks for the person", async () => {
+    const { client, server } = await hostFor(() =>
+      Response.json({
+        parse: { title: "Category:Aubertin, Mireille", text: { "*": fixture("person.html") } },
+      }),
+    );
+
+    const result = await client.callTool({
+      name: "get_person",
+      arguments: { category: "Category:Aubertin, Mireille" },
+    });
+
+    expect((result.structuredContent as { name?: string }).name).toBe("Mireille Aubertin");
+    await server.close();
+  });
+
+  it("answers a host that browses a category", async () => {
+    const { client, server } = await hostFor(() =>
+      Response.json(JSON.parse(fixture("category-members.json"))),
+    );
+
+    const result = await client.callTool({
+      name: "browse_category",
+      arguments: { category: "For piano" },
+    });
+
+    expect((result.structuredContent as { returned?: number }).returned).toBe(3);
     await server.close();
   });
 });
