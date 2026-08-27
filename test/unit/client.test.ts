@@ -13,9 +13,9 @@ import { MIN_ALLOWED_INTERVAL_MS } from "../../src/config.js";
 
 const FIXTURES = join(import.meta.dirname, "..", "fixtures");
 
-function envelope(title: string, pageid: number, fixture: string): Response {
+function envelope(title: string, fixture: string): Response {
   return Response.json({
-    parse: { title, pageid, text: { "*": readFileSync(join(FIXTURES, fixture), "utf8") } },
+    parse: { title, text: { "*": readFileSync(join(FIXTURES, fixture), "utf8") } },
   });
 }
 
@@ -26,7 +26,7 @@ afterEach(() => {
 describe("reading the same page twice", () => {
   it("asks the site once and says the second answer was held", async () => {
     const fetchImpl = vi.fn(async () =>
-      envelope("Three Inventions (Aubertin, Mireille)", 900_000, "work-full.html"),
+      envelope("Three Inventions (Aubertin, Mireille)", "work-full.html"),
     );
     const client = new ImslpClient({
       config: loadConfig({}),
@@ -45,7 +45,7 @@ describe("reading the same page twice", () => {
     const fetchImpl = vi.fn(
       async () =>
         new Promise<Response>((resolve) => {
-          setTimeout(() => resolve(envelope("A work (A composer)", 1, "work-sparse.html")), 10);
+          setTimeout(() => resolve(envelope("A work (A composer)", "work-sparse.html")), 10);
         }),
     );
     const client = new ImslpClient({
@@ -59,8 +59,8 @@ describe("reading the same page twice", () => {
     ]);
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
-    expect(one.data.pageid).toBe(1);
-    expect(two.data.pageid).toBe(1);
+    expect(one.data.title).toBe("A work (A composer)");
+    expect(two.data.title).toBe("A work (A composer)");
   });
 });
 
@@ -68,7 +68,7 @@ describe("a caller who stopped waiting", () => {
   it("is answered with an abandoned read, with nothing asked of the site", async () => {
     const controller = new AbortController();
     controller.abort();
-    const fetchImpl = vi.fn(async () => envelope("A work (A composer)", 1, "work-sparse.html"));
+    const fetchImpl = vi.fn(async () => envelope("A work (A composer)", "work-sparse.html"));
     const client = new ImslpClient({
       config: loadConfig({}),
       fetchImpl: fetchImpl as unknown as typeof fetch,
@@ -86,7 +86,7 @@ describe("a caller who stopped waiting", () => {
     const fetchImpl = vi.fn(
       async () =>
         new Promise<Response>((resolve) => {
-          setTimeout(() => resolve(envelope("A work (A composer)", 7, "work-sparse.html")), 50);
+          setTimeout(() => resolve(envelope("A work (A composer)", "work-sparse.html")), 50);
         }),
     );
     const client = new ImslpClient({
@@ -103,7 +103,7 @@ describe("a caller who stopped waiting", () => {
     await vi.advanceTimersByTimeAsync(100);
 
     expect((await leaving)?.code).toBe("timeout");
-    expect((await staying).data.pageid).toBe(7);
+    expect((await staying).data.title).toBe("A work (A composer)");
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });
@@ -124,7 +124,7 @@ describe("an answer that is not a rendered page", () => {
 describe("the guarantees this client keeps whoever built it", () => {
   it("paces at the floor even when handed a config below it", async () => {
     const fetchImpl = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
-      envelope("A work (A composer)", 1, "work-sparse.html"),
+      envelope("A work (A composer)", "work-sparse.html"),
     );
     const client = new ImslpClient({
       config: { ...loadConfig({}), minIntervalMs: 1, userAgent: "someone-else/1.0" },

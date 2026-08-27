@@ -102,7 +102,14 @@ export const getWorkOutputShape = {
   title: z.string(),
   page_title: z.string(),
   page_url: z.string(),
-  pageid: z.number().int(),
+  pageid: z
+    .number()
+    .int()
+    .nullable()
+    .describe(
+      "The number IMSLP gives the page. Known when the work was addressed by it, and null when " +
+        "it was addressed by title: a rendered page states its title and nothing else.",
+    ),
   alternative_title: z.string().nullable(),
   composer: z.string().nullable(),
   composer_page_url: z.string().nullable(),

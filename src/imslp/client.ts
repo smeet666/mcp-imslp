@@ -45,17 +45,22 @@ interface InFlightRead {
 /** A page, named either by its title or by the number the site gives it. */
 export type PageTarget = { page: string } | { pageid: number };
 
-/** The rendered page of one title, as `action=parse` serves it. */
+/**
+ * The rendered page of one title, as `action=parse` serves it.
+ *
+ * IMSLP runs a version of MediaWiki whose parsed page states its title and its
+ * rendering and nothing else, so the number of the page is known here only when
+ * the caller asked for it by that number.
+ */
 export interface RenderedPage {
   title: string;
-  pageid: number;
+  pageid: number | null;
   html: string;
 }
 
 interface ParseResponse {
   parse?: {
     title?: string;
-    pageid?: number;
     text?: { "*"?: string };
   };
   error?: { code?: string; info?: string };
@@ -122,12 +127,13 @@ export class ImslpClient {
     const url = apiUrl({ action: "parse", prop: "text", ...named });
     const asked = "page" in target ? `"${target.page}"` : `page ${target.pageid}`;
 
+    const pageid = "pageid" in target ? target.pageid : null;
+
     return await this.read<RenderedPage>(url, signal, (payload) => {
       const parsed = payload as ParseResponse;
       const html = parsed.parse?.text?.["*"];
-      const pageid = parsed.parse?.pageid;
       const served = parsed.parse?.title;
-      if (html === undefined || pageid === undefined || served === undefined) {
+      if (html === undefined || served === undefined) {
         throw parseFailure(url, `no rendered text for ${asked}`);
       }
       return { data: { title: served, pageid, html } };

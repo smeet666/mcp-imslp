@@ -20,7 +20,7 @@ function fixture(name: string): string {
 
 const CONTEXT = {
   pageTitle: "Three Inventions (Aubertin, Mireille)",
-  pageid: 900_000,
+  pageid: null,
   url: "https://imslp.org/api.php?action=parse",
 };
 
@@ -40,7 +40,7 @@ describe("the facets of a work", () => {
       title: "Three Inventions",
       page_title: "Three Inventions (Aubertin, Mireille)",
       page_url: "https://imslp.org/wiki/Three_Inventions_(Aubertin,_Mireille)",
-      pageid: 900_000,
+      pageid: null,
       alternative_title: "Trois inventions",
       composer: "Aubertin, Mireille",
       composer_page_url: "https://imslp.org/wiki/Category:Aubertin,_Mireille",

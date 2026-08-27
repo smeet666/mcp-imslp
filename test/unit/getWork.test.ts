@@ -21,8 +21,14 @@ function fixture(name: string): string {
 }
 
 /** The envelope MediaWiki wraps a rendered page in. */
-function rendered(title: string, pageid: number, name: string): Response {
-  return new Response(JSON.stringify({ parse: { title, pageid, text: { "*": fixture(name) } } }), {
+/**
+ * The envelope MediaWiki wraps a rendered page in.
+ *
+ * IMSLP runs a version that states the title and the rendering and nothing
+ * else: no page id and no revision come back with a parsed page.
+ */
+function rendered(title: string, name: string): Response {
+  return new Response(JSON.stringify({ parse: { title, text: { "*": fixture(name) } } }), {
     status: 200,
     headers: { "content-type": "application/json" },
   });
@@ -30,7 +36,6 @@ function rendered(title: string, pageid: number, name: string): Response {
 
 interface Served {
   title: string;
-  pageid: number;
   fixture: string;
 }
 
@@ -43,7 +48,7 @@ function clientServing(pages: Served[]): { client: ImslpClient; asked: string[] 
     if (!page) {
       throw new Error("nothing left to serve");
     }
-    return rendered(page.title, page.pageid, page.fixture);
+    return rendered(page.title, page.fixture);
   });
 
   return {
@@ -81,7 +86,6 @@ describe("reading a work", () => {
     const { client } = clientServing([
       {
         title: "Three Inventions (Aubertin, Mireille)",
-        pageid: 900_000,
         fixture: "work-full.html",
       },
     ]);
@@ -103,7 +107,6 @@ describe("reading a work", () => {
     const { client } = clientServing([
       {
         title: "Three Inventions (Aubertin, Mireille)",
-        pageid: 900_000,
         fixture: "work-full.html",
       },
     ]);
@@ -120,7 +123,6 @@ describe("reading a work", () => {
     const { client } = clientServing([
       {
         title: "Three Inventions (Aubertin, Mireille)",
-        pageid: 900_000,
         fixture: "work-full.html",
       },
     ]);
@@ -133,7 +135,6 @@ describe("reading a work", () => {
     const { client, asked } = clientServing([
       {
         title: "Three Inventions (Aubertin, Mireille)",
-        pageid: 900_000,
         fixture: "work-full.html",
       },
     ]);
@@ -150,12 +151,10 @@ describe("a title that stands for another", () => {
     const { client, asked } = clientServing([
       {
         title: "Conseil inutile (Rebikov, Vladimir)",
-        pageid: 52_214,
         fixture: "work-redirect.html",
       },
       {
         title: "Trois inventions, Op.12 (Aubertin, Mireille)",
-        pageid: 900_000,
         fixture: "work-full.html",
       },
     ]);
@@ -174,8 +173,8 @@ describe("a title that stands for another", () => {
 
   it("reports a redirect that leads to another redirect rather than following it", async () => {
     const { client } = clientServing([
-      { title: "One (Composer)", pageid: 1, fixture: "work-redirect.html" },
-      { title: "Two (Composer)", pageid: 2, fixture: "work-redirect.html" },
+      { title: "One (Composer)", fixture: "work-redirect.html" },
+      { title: "Two (Composer)", fixture: "work-redirect.html" },
     ]);
 
     const result = await withPacing(runGetWork(client, { page: "One (Composer)" }));
@@ -190,7 +189,6 @@ describe("a work with more editions than one answer holds", () => {
     const { client } = clientServing([
       {
         title: "Six éditions (Nadaud, Camille)",
-        pageid: 900_100,
         fixture: "work-many-editions.html",
       },
     ]);
@@ -211,7 +209,6 @@ describe("what the tool refuses", () => {
     const { client } = clientServing([
       {
         title: "Three Inventions (Aubertin, Mireille)",
-        pageid: 900_000,
         fixture: "work-full.html",
       },
     ]);
@@ -226,7 +223,6 @@ describe("what the tool refuses", () => {
     const { client } = clientServing([
       {
         title: "Three Inventions (Aubertin, Mireille)",
-        pageid: 900_000,
         fixture: "work-full.html",
       },
     ]);

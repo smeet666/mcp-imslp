@@ -26,21 +26,21 @@ function fixture(name: string): string {
   return readFileSync(join(FIXTURES, name), "utf8");
 }
 
-function envelope(title: string, pageid: number, name: string): Response {
-  return Response.json({ parse: { title, pageid, text: { "*": fixture(name) } } });
+function envelope(title: string, name: string): Response {
+  return Response.json({ parse: { title, text: { "*": fixture(name) } } });
 }
 
-function clientServing(title: string, pageid: number, name: string): ImslpClient {
+function clientServing(title: string, name: string): ImslpClient {
   return new ImslpClient({
     config: loadConfig({}),
-    fetchImpl: (async () => envelope(title, pageid, name)) as unknown as typeof fetch,
+    fetchImpl: (async () => envelope(title, name)) as unknown as typeof fetch,
   });
 }
 
 function workOf(name: string, pageTitle: string) {
   const outcome = parseWorkPage(fixture(name), {
     pageTitle,
-    pageid: 1,
+    pageid: null,
     url: "https://imslp.org/api.php",
   });
   if (outcome.kind !== "work") {
@@ -72,7 +72,7 @@ describe("a composer the page names without linking", () => {
   });
 
   it("writes a work without a composer as its title alone", async () => {
-    const result = await runGetWork(clientServing("Œuvre anonyme", 9, "work-no-composer.html"), {
+    const result = await runGetWork(clientServing("Œuvre anonyme", "work-no-composer.html"), {
       page: "Œuvre anonyme",
     });
 
@@ -81,7 +81,7 @@ describe("a composer the page names without linking", () => {
 
   it("writes a copyright that excludes nowhere without naming a country", async () => {
     const result = await runGetWork(
-      clientServing("Petite pièce (Nadaud, Camille)", 10, "work-sparse.html"),
+      clientServing("Petite pièce (Nadaud, Camille)", "work-sparse.html"),
       { page: "Petite pièce (Nadaud, Camille)" },
     );
 
@@ -99,7 +99,7 @@ describe("a composer the page names without linking", () => {
 describe("a work page holding nothing yet", () => {
   it("says so rather than leaving a caller to read an empty list", async () => {
     const result = await runGetWork(
-      clientServing("Œuvre sans fichier (Nadaud, Camille)", 5, "work-no-files.html"),
+      clientServing("Œuvre sans fichier (Nadaud, Camille)", "work-no-files.html"),
       {
         page: "Œuvre sans fichier (Nadaud, Camille)",
       },
@@ -110,7 +110,7 @@ describe("a work page holding nothing yet", () => {
   });
 
   it("says when an answer was held rather than asked for again", async () => {
-    const client = clientServing("Œuvre sans fichier (Nadaud, Camille)", 5, "work-no-files.html");
+    const client = clientServing("Œuvre sans fichier (Nadaud, Camille)", "work-no-files.html");
     await runGetWork(client, { page: "Œuvre sans fichier (Nadaud, Camille)" });
 
     const second = await runGetWork(client, { page: "Œuvre sans fichier (Nadaud, Camille)" });
@@ -204,7 +204,6 @@ describe("a redirect read twice", () => {
         at += 1;
         return envelope(
           at === 1 ? "Conseil (Rebikov, Vladimir)" : "Three Inventions (Aubertin, Mireille)",
-          900_000,
           name,
         );
       }) as unknown as typeof fetch,
@@ -291,7 +290,6 @@ describe("calling the tool through the protocol", () => {
       fetchImpl: (async () =>
         envelope(
           "Three Inventions (Aubertin, Mireille)",
-          900_000,
           "work-full.html",
         )) as unknown as typeof fetch,
     });
@@ -311,7 +309,7 @@ describe("calling the tool through the protocol", () => {
 
 describe("a read nobody is waiting for any more", () => {
   it("is not asked of the site a second time", async () => {
-    const fetchImpl = vi.fn(async () => envelope("A work (A composer)", 1, "work-sparse.html"));
+    const fetchImpl = vi.fn(async () => envelope("A work (A composer)", "work-sparse.html"));
     const client = new ImslpClient({
       config: loadConfig({}),
       fetchImpl: fetchImpl as unknown as typeof fetch,

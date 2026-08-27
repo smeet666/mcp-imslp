@@ -86,7 +86,8 @@ const EDITION_FIELDS: Record<string, EditionTextField> = {
 export interface WorkPageContext {
   /** The title of the page as the site served it. */
   pageTitle: string;
-  pageid: number;
+  /** The number of the page, when the caller addressed the work by it. */
+  pageid: number | null;
   /** The address the rendering was read from, for an error that names it. */
   url: string;
   /** The title asked for, when this page answered for it. */

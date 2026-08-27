@@ -78,7 +78,14 @@ export interface Work {
   title: string;
   page_title: string;
   page_url: string;
-  pageid: number;
+  /**
+   * The number IMSLP gives the page, when it is known.
+   *
+   * A rendered page states its title and its rendering and nothing else, so
+   * this is known when a caller addressed the work by its id and unknown when
+   * they addressed it by its title.
+   */
+  pageid: number | null;
   alternative_title: string | null;
   composer: string | null;
   composer_page_url: string | null;
