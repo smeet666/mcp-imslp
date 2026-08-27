@@ -246,6 +246,22 @@ describe("what the tool refuses", () => {
 });
 
 describe("a work IMSLP does not hold", () => {
+  it("reports a title the library states it does not have as an absence", async () => {
+    const client = new ImslpClient({
+      config: loadConfig({}),
+      fetchImpl: (async () =>
+        Response.json({
+          error: { code: "missingtitle", info: "The page you specified doesn't exist" },
+        })) as unknown as typeof fetch,
+    });
+
+    const result = await runGetWork(client, { page: "Gymnopédies (Satie, Erik)" });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("[not_found]");
+    expect(result.content[0]?.text).toContain("Work (Composer)");
+  });
+
   it("reports an absence as an absence", async () => {
     const client = new ImslpClient({
       config: loadConfig({}),

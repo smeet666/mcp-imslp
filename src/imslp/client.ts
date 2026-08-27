@@ -12,7 +12,7 @@ import {
   loadConfig,
   withProjectIdentity,
 } from "../config.js";
-import { parseFailure } from "../errors.js";
+import { notFound, parseFailure } from "../errors.js";
 import type { Work } from "../types.js";
 import { TtlLruCache } from "./cache.js";
 import { fetchJson, givenUp } from "./http.js";
@@ -131,6 +131,9 @@ export class ImslpClient {
 
     return await this.read<RenderedPage>(url, signal, (payload) => {
       const parsed = payload as ParseResponse;
+      if (parsed.error) {
+        throw asStated(parsed.error, url, asked);
+      }
       const html = parsed.parse?.text?.["*"];
       const served = parsed.parse?.title;
       if (html === undefined || served === undefined) {
@@ -256,6 +259,25 @@ export class ImslpClient {
       entry.controller.abort();
     }
   }
+}
+
+/** The codes the API answers with when the page asked for is not there. */
+const ABSENT = new Set(["missingtitle", "nosuchpageid", "invalidtitle"]);
+
+/**
+ * An error the API stated, in this client's own vocabulary.
+ *
+ * The API answers a page it does not hold with HTTP 200 and an error in the
+ * payload, so an absence is visible nowhere else. Read as anything but an
+ * absence, it would send someone to report a defect over a work the library
+ * simply does not have.
+ */
+function asStated(error: { code?: string; info?: string }, url: string, asked: string): Error {
+  const code = error.code ?? "an error it did not name";
+  if (error.code !== undefined && ABSENT.has(error.code)) {
+    return notFound(url, asked);
+  }
+  return parseFailure(url, `IMSLP answered "${code}" for ${asked}`);
 }
 
 /** A promise that rejects when this caller stops waiting, and never resolves. */

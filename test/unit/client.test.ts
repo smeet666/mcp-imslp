@@ -108,6 +108,69 @@ describe("a caller who stopped waiting", () => {
   });
 });
 
+describe("a page IMSLP does not hold", () => {
+  it("reads a missing title as an absence rather than as an unreadable answer", async () => {
+    // The API states this under HTTP 200, so an absence is only ever visible in
+    // the payload: read as a failure to parse, it would send someone to report
+    // a defect over a work the library simply does not have.
+    const client = new ImslpClient({
+      config: loadConfig({}),
+      fetchImpl: (async () =>
+        Response.json({
+          error: { code: "missingtitle", info: "The page you specified doesn't exist" },
+        })) as unknown as typeof fetch,
+    });
+
+    await expect(client.renderPage({ page: "Nothing (Nobody)" })).rejects.toMatchObject({
+      code: "not_found",
+    });
+  });
+
+  it("reads a page id nobody holds the same way", async () => {
+    const client = new ImslpClient({
+      config: loadConfig({}),
+      fetchImpl: (async () =>
+        Response.json({
+          error: { code: "nosuchpageid", info: "There is no page with ID 999999999" },
+        })) as unknown as typeof fetch,
+    });
+
+    await expect(client.renderPage({ pageid: 999_999_999 })).rejects.toMatchObject({
+      code: "not_found",
+    });
+  });
+
+  it("names an error of the API it does not know rather than guessing at it", async () => {
+    const client = new ImslpClient({
+      config: loadConfig({}),
+      fetchImpl: (async () =>
+        Response.json({
+          error: { code: "readapidenied", info: "Read access denied" },
+        })) as unknown as typeof fetch,
+    });
+
+    await expect(client.renderPage({ pageid: 1 })).rejects.toMatchObject({
+      code: "parse_failure",
+      message: expect.stringContaining("readapidenied"),
+    });
+  });
+});
+
+describe("an error the API states without naming", () => {
+  it("says so rather than reporting a code nobody sent", async () => {
+    const client = new ImslpClient({
+      config: loadConfig({}),
+      fetchImpl: (async () =>
+        Response.json({ error: { info: "Something went wrong" } })) as unknown as typeof fetch,
+    });
+
+    await expect(client.renderPage({ pageid: 1 })).rejects.toMatchObject({
+      code: "parse_failure",
+      message: expect.stringContaining("did not name"),
+    });
+  });
+});
+
 describe("an answer that is not a rendered page", () => {
   it("reports the shape rather than an empty work", async () => {
     const client = new ImslpClient({
