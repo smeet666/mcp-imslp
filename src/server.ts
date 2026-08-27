@@ -7,8 +7,17 @@
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import type { Config, Logger } from "./config.js";
 import { createLogger, loadConfig } from "./config.js";
+import { ImslpClient } from "./imslp/client.js";
+import type { GetWorkArgs } from "./tools/getWork.js";
+import {
+  getWorkDescription,
+  getWorkInput,
+  getWorkOutputShape,
+  runGetWork,
+} from "./tools/getWork.js";
 import { PKG_VERSION } from "./version.js";
 
 export interface CreateServerOptions {
@@ -28,6 +37,11 @@ export const READ_ONLY = {
 export function createServer(options: CreateServerOptions = {}): McpServer {
   const config = options.config ?? loadConfig();
   const logger = options.logger ?? createLogger(config.logLevel);
+  const client = new ImslpClient({
+    config,
+    logger,
+    ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+  });
 
   const server = new McpServer(
     { name: "mcp-imslp", version: PKG_VERSION },
@@ -45,9 +59,20 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
     },
   );
 
-  // Tools are registered here, in a deterministic order, which is what a client
+  // Tools are registered in a deterministic order, which is what a client
   // caches a tool list against. They share one client, so the pacing and the
   // cache belong to the server rather than to a tool.
+  server.registerTool(
+    "get_work",
+    {
+      title: "Read a work",
+      description: getWorkDescription,
+      inputSchema: getWorkInput,
+      outputSchema: z.object(getWorkOutputShape),
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => runGetWork(client, args as GetWorkArgs, extra?.signal),
+  );
 
   logger.info(
     `ready: user-agent="${config.userAgent}", min interval ${config.minIntervalMs}ms, cache ${config.cacheTtlMs}ms`,

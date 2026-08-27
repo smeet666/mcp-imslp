@@ -35,7 +35,7 @@ export interface HttpDeps {
   config: Config;
   limiter: RateLimiter;
   logger: Logger;
-  fetchImpl?: typeof fetch;
+  fetchImpl: typeof fetch;
   /**
    * The caller's own signal, when the host gave one.
    *
@@ -188,11 +188,14 @@ function readAnswer(
  */
 export async function fetchJson<T>(url: string, deps: HttpDeps): Promise<T> {
   const { config, limiter, logger } = deps;
-  const doFetch = deps.fetchImpl ?? fetch;
+  const doFetch = deps.fetchImpl;
   const abandoned = () => deps.signal?.aborted === true;
 
   return await limiter.schedule(async () => {
-    let lastError: ImslpError | undefined;
+    // What is reported when every attempt has failed. It is replaced by each
+    // attempt that fails in a way worth naming, and a loop that ended without
+    // naming one still has something to answer with.
+    let lastError = new ImslpError("network_error", `Could not fetch ${url}.`, { url });
 
     // Set when the site says how long to stay away; it replaces our own guess
     // for the next attempt. Applied here rather than where it is read, so no
@@ -240,7 +243,7 @@ export async function fetchJson<T>(url: string, deps: HttpDeps): Promise<T> {
       return parseBody<T>(body, url);
     }
 
-    throw lastError ?? new ImslpError("network_error", `Could not fetch ${url}.`, { url });
+    throw lastError;
   });
 }
 

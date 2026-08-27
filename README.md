@@ -29,15 +29,15 @@ into "public domain".
 
 ## Configuration
 
-| Variable | Default | What it does |
-| --- | --- | --- |
-| `IMSLP_USER_AGENT` | the project identity | Names your application; the project identity is appended so IMSLP can reach a person |
-| `IMSLP_MIN_INTERVAL_MS` | 2500 | Gap between requests, never below 2000 |
-| `IMSLP_TIMEOUT_MS` | 30000 | Deadline for one request |
-| `IMSLP_MAX_RETRIES` | 3 | Attempts after a transient failure |
-| `IMSLP_CACHE_TTL_MS` | 900000 | How long a page stays in memory |
-| `IMSLP_CACHE_MAX_ENTRIES` | 100 | Pages held at once |
-| `IMSLP_LOG_LEVEL` | `error` | `silent`, `error`, `info` or `debug`, on stderr |
+| Variable                  | Default              | What it does                                                                         |
+| ------------------------- | -------------------- | ------------------------------------------------------------------------------------ |
+| `IMSLP_USER_AGENT`        | the project identity | Names your application; the project identity is appended so IMSLP can reach a person |
+| `IMSLP_MIN_INTERVAL_MS`   | 2500                 | Gap between requests, never below 2000                                               |
+| `IMSLP_TIMEOUT_MS`        | 30000                | Deadline for one request                                                             |
+| `IMSLP_MAX_RETRIES`       | 3                    | Attempts after a transient failure                                                   |
+| `IMSLP_CACHE_TTL_MS`      | 900000               | How long a page stays in memory                                                      |
+| `IMSLP_CACHE_MAX_ENTRIES` | 100                  | Pages held at once                                                                   |
+| `IMSLP_LOG_LEVEL`         | `error`              | `silent`, `error`, `info` or `debug`, on stderr                                      |
 
 ## Licence
 

@@ -13,8 +13,10 @@ import {
   withProjectIdentity,
 } from "../config.js";
 import { parseFailure } from "../errors.js";
+import type { Work } from "../types.js";
 import { TtlLruCache } from "./cache.js";
 import { fetchJson, givenUp } from "./http.js";
+import { parseWorkPage } from "./parseWork.js";
 import { RateLimiter } from "./rateLimiter.js";
 import { apiUrl } from "./urls.js";
 
@@ -39,6 +41,9 @@ interface InFlightRead {
   controller: AbortController;
   waiting: number;
 }
+
+/** A page, named either by its title or by the number the site gives it. */
+export type PageTarget = { page: string } | { pageid: number };
 
 /** The rendered page of one title, as `action=parse` serves it. */
 export interface RenderedPage {
@@ -82,7 +87,7 @@ export class ImslpClient {
   private readonly logger: Logger;
   private readonly limiter: RateLimiter;
   private readonly cache: TtlLruCache<unknown>;
-  private readonly fetchImpl: typeof fetch | undefined;
+  private readonly fetchImpl: typeof fetch;
   /**
    * Reads under way, by address.
    *
@@ -102,7 +107,7 @@ export class ImslpClient {
     this.logger = options.logger ?? createLogger(this.config.logLevel);
     this.limiter = new RateLimiter({ minIntervalMs: this.config.minIntervalMs });
     this.cache = new TtlLruCache<unknown>(this.config.cacheMaxEntries, this.config.cacheTtlMs);
-    this.fetchImpl = options.fetchImpl;
+    this.fetchImpl = options.fetchImpl ?? globalThis.fetch;
   }
 
   /**
@@ -112,18 +117,58 @@ export class ImslpClient {
    * `{{LinkEd|Herrmann|Scholtz|1845|1918}}` there and a name here. The facets a
    * work carries are read off this rendering.
    */
-  async renderPage(title: string, signal?: AbortSignal): Promise<Read<RenderedPage>> {
-    const url = apiUrl({ action: "parse", prop: "text", page: title });
+  async renderPage(target: PageTarget, signal?: AbortSignal): Promise<Read<RenderedPage>> {
+    const named = "page" in target ? { page: target.page } : { pageid: target.pageid };
+    const url = apiUrl({ action: "parse", prop: "text", ...named });
+    const asked = "page" in target ? `"${target.page}"` : `page ${target.pageid}`;
+
     return await this.read<RenderedPage>(url, signal, (payload) => {
       const parsed = payload as ParseResponse;
       const html = parsed.parse?.text?.["*"];
       const pageid = parsed.parse?.pageid;
       const served = parsed.parse?.title;
       if (html === undefined || pageid === undefined || served === undefined) {
-        throw parseFailure(url, `no rendered text for "${title}"`);
+        throw parseFailure(url, `no rendered text for ${asked}`);
       }
       return { data: { title: served, pageid, html } };
     });
+  }
+
+  /**
+   * One work, read from its page.
+   *
+   * A title on IMSLP can stand for another page, and the rendering says so
+   * rather than serving the work behind it. That page is read once more, and a
+   * second redirect ends the read: following a chain would ask a library run on
+   * donations for a page a caller never named.
+   */
+  async getWork(target: PageTarget, signal?: AbortSignal): Promise<Read<Work>> {
+    const first = await this.renderPage(target, signal);
+    const asked = "page" in target ? target.page : first.data.title;
+    const parsed = parseWorkPage(first.data.html, {
+      pageTitle: first.data.title,
+      pageid: first.data.pageid,
+      url: apiUrl({ action: "parse", prop: "text" }),
+    });
+    if (parsed.kind === "work") {
+      return { data: parsed.work, cached: first.cached };
+    }
+
+    const second = await this.renderPage({ page: parsed.target }, signal);
+    const followed = parseWorkPage(second.data.html, {
+      pageTitle: second.data.title,
+      pageid: second.data.pageid,
+      url: apiUrl({ action: "parse", prop: "text" }),
+      redirectedFrom: asked,
+    });
+    if (followed.kind !== "work") {
+      throw parseFailure(
+        apiUrl({ action: "parse", prop: "text", page: parsed.target }),
+        `"${asked}" redirects to "${parsed.target}", which redirects on to ` +
+          `"${followed.target}"`,
+      );
+    }
+    return { data: followed.work, cached: first.cached && second.cached };
   }
 
   /**
@@ -147,12 +192,14 @@ export class ImslpClient {
       return { ...cached, cached: true };
     }
 
-    const joined = this.join<T>(url, shape);
+    const read = this.join<T>(url, shape);
     try {
-      const result = await (signal ? Promise.race([joined, abortsTo(signal, url)]) : joined);
+      const result = await (signal
+        ? Promise.race([read.promise, abortsTo(signal, url)])
+        : read.promise);
       return { ...result, cached: false };
     } finally {
-      this.leave(url);
+      this.leave(url, read.entry);
     }
   }
 
@@ -166,11 +213,14 @@ export class ImslpClient {
   private join<T>(
     url: string,
     shape: (payload: unknown) => { data: T; skipped?: number },
-  ): Promise<{ data: T; skipped?: number }> {
+  ): { promise: Promise<{ data: T; skipped?: number }>; entry: InFlightRead } {
     const existing = this.inFlight.get(url);
     if (existing) {
       existing.waiting += 1;
-      return existing.promise as Promise<{ data: T; skipped?: number }>;
+      return {
+        promise: existing.promise as Promise<{ data: T; skipped?: number }>,
+        entry: existing,
+      };
     }
 
     const controller = new AbortController();
@@ -180,26 +230,24 @@ export class ImslpClient {
         limiter: this.limiter,
         logger: this.logger,
         signal: controller.signal,
-        ...(this.fetchImpl ? { fetchImpl: this.fetchImpl } : {}),
+        fetchImpl: this.fetchImpl,
       });
       const result = shape(payload);
       this.cache.set(url, result);
       return result;
     })();
 
-    this.inFlight.set(url, { promise, controller, waiting: 1 });
-    return promise;
+    const entry: InFlightRead = { promise, controller, waiting: 1 };
+    this.inFlight.set(url, entry);
+    return { promise, entry };
   }
 
   /** One caller stops waiting; the request ends when the last one has. */
-  private leave(url: string): void {
-    const entry = this.inFlight.get(url);
-    if (!entry) {
-      return;
-    }
+  private leave(url: string, entry: InFlightRead): void {
     entry.waiting -= 1;
     if (entry.waiting <= 0) {
       this.inFlight.delete(url);
+      entry.controller.abort();
     }
   }
 }

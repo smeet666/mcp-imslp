@@ -2,6 +2,10 @@
 
 const ALLOWED_HOSTS = new Set(["imslp.org", "www.imslp.org"]);
 
+const SPACES = / /g;
+/** The punctuation MediaWiki leaves as itself in the path of a page. */
+const READABLE_IN_A_PATH = /%(2C|3A|28|29|21|2A|27|24|26|2B|3B|3D|40)/gi;
+
 export const BASE_URL = "https://imslp.org";
 
 /**
@@ -15,9 +19,20 @@ export const BASE_URL = "https://imslp.org";
 export const API_PATH = "/api.php";
 export const ISCR_PATH = "/imslpscripts/API.ISCR.php";
 
-/** A page as a reader would open it, which is what an answer links to. */
+/**
+ * A page as a reader would open it, which is what an answer links to.
+ *
+ * MediaWiki writes a title into a path with spaces as underscores and leaves
+ * the punctuation of a work title readable, so an address built here matches
+ * the one the site publishes for the same page rather than an escaped variant
+ * of it.
+ */
 export function wikiPageUrl(title: string): string {
-  return `${BASE_URL}/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`;
+  const path = encodeURIComponent(title.replace(SPACES, "_")).replace(
+    READABLE_IN_A_PATH,
+    (character) => decodeURIComponent(character),
+  );
+  return `${BASE_URL}/wiki/${path}`;
 }
 
 /** Build a call to the MediaWiki API, always in JSON. */

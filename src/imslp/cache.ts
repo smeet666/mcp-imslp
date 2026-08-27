@@ -42,12 +42,11 @@ export class TtlLruCache<V> {
     }
     this.store.delete(key);
     this.store.set(key, { value, expiresAt: Date.now() + this.ttlMs });
-    while (this.store.size > this.maxEntries) {
-      const oldest = this.store.keys().next();
-      if (oldest.done) {
+    for (const oldest of this.store.keys()) {
+      if (this.store.size <= this.maxEntries) {
         break;
       }
-      this.store.delete(oldest.value);
+      this.store.delete(oldest);
     }
   }
 

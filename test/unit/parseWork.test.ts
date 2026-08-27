@@ -1,0 +1,236 @@
+/**
+ * What a work page amounts to, read from the corpus.
+ *
+ * The contract stated here is what IMSLP publishes and nothing beyond it: a
+ * facet the page leaves empty is null, a rating nobody voted on is absent
+ * rather than zero, and a copyright statement keeps the jurisdictions it names.
+ */
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { ImslpError } from "../../src/errors.js";
+import { parseWorkPage } from "../../src/imslp/parseWork.js";
+
+const FIXTURES = join(import.meta.dirname, "..", "fixtures");
+
+function fixture(name: string): string {
+  return readFileSync(join(FIXTURES, name), "utf8");
+}
+
+const CONTEXT = {
+  pageTitle: "Three Inventions (Aubertin, Mireille)",
+  pageid: 900_000,
+  url: "https://imslp.org/api.php?action=parse",
+};
+
+function readFull() {
+  const outcome = parseWorkPage(fixture("work-full.html"), CONTEXT);
+  if (outcome.kind !== "work") {
+    throw new Error(`expected a work, read a ${outcome.kind}`);
+  }
+  return outcome.work;
+}
+
+describe("the facets of a work", () => {
+  it("reads what the page states", () => {
+    const work = readFull();
+
+    expect(work).toMatchObject({
+      title: "Three Inventions",
+      page_title: "Three Inventions (Aubertin, Mireille)",
+      page_url: "https://imslp.org/wiki/Three_Inventions_(Aubertin,_Mireille)",
+      pageid: 900_000,
+      alternative_title: "Trois inventions",
+      composer: "Aubertin, Mireille",
+      composer_page_url: "https://imslp.org/wiki/Category:Aubertin,_Mireille",
+      opus_catalogue_number: "Op.12",
+      internal_catalogue_number: "MAI 12",
+      composition_year: "ca.1899",
+      first_publication: "1902",
+      dedication: "à ma sœur",
+      average_duration: "12 minutes",
+      language: "French",
+      composer_period: "Romantic",
+      piece_style: "Romantic",
+      instrumentation: "piano",
+      movements: "3",
+      source: "IMSLP",
+      license: "CC BY-SA 4.0",
+      redirected_from: null,
+    });
+  });
+
+  it("keeps a date in the wording the page used", () => {
+    // "ca.1899" is what the page says, and a year on its own would state a
+    // certainty the page declined to state.
+    expect(readFull().composition_year).toBe("ca.1899");
+  });
+
+  it("reads the genre categories the header lists", () => {
+    expect(readFull().genre_categories).toEqual(["Nocturnes", "For piano"]);
+  });
+
+  it("reads an external link with the label it was given", () => {
+    expect(readFull().external_links).toEqual([
+      { label: "Composer page", url: "https://example.invalid/aubertin" },
+    ]);
+  });
+
+  it("reads a facet the page left empty as absent", () => {
+    const outcome = parseWorkPage(fixture("work-sparse.html"), {
+      ...CONTEXT,
+      pageTitle: "Petite pièce (Nadaud, Camille)",
+    });
+    if (outcome.kind !== "work") {
+      throw new Error("expected a work");
+    }
+
+    expect(outcome.work.alternative_title).toBeNull();
+    expect(outcome.work.opus_catalogue_number).toBeNull();
+    expect(outcome.work.dedication).toBeNull();
+  });
+
+  it("reads an unassigned catalogue number as absent", () => {
+    // The page prints "None" beside an editor-only assignment link, which says
+    // the library has assigned none.
+    const outcome = parseWorkPage(fixture("work-sparse.html"), CONTEXT);
+    if (outcome.kind !== "work") {
+      throw new Error("expected a work");
+    }
+    expect(outcome.work.internal_catalogue_number).toBeNull();
+  });
+});
+
+describe("the sections of a work", () => {
+  it("counts each section as the page counts it", () => {
+    expect(readFull().sections).toEqual([
+      { name: "Recordings", files: 1 },
+      { name: "Scores", files: 2 },
+      { name: "Parts", files: 0 },
+    ]);
+  });
+});
+
+describe("the editions of a work", () => {
+  it("groups the files of one edition under the metadata they share", () => {
+    const editions = readFull().editions ?? [];
+    expect(editions).toHaveLength(2);
+
+    const scores = editions[1];
+    expect(scores?.section).toBe("Scores");
+    expect(scores?.publisher_info).toBe("Ville-Inventée: Éditions Nulle Part, n.d. (1902).");
+    expect(scores?.editor).toBe("Aubertin, Mireille (1861-1934)");
+    expect(scores?.misc_notes).toBe("Scanned at 600dpi.");
+    expect(scores?.files.map((file) => file.imslp_id)).toEqual([900_002, 900_003]);
+  });
+
+  it("reads a copyright statement per jurisdiction", () => {
+    const copyright = readFull().editions?.[1]?.copyright;
+
+    expect(copyright).toEqual({
+      statement: "Public Domain - Non-PD US",
+      headline: "Public Domain",
+      restrictions: ["Non-PD US"],
+      reviewed_in: ["Canada", "United States", "European Union"],
+    });
+  });
+
+  it("drops the editor-only links printed beside a statement", () => {
+    // The page prints "[tag/del]" for logged-in editors, which is a control
+    // rather than part of what the statement says.
+    expect(readFull().editions?.[1]?.copyright?.statement).not.toContain("tag");
+  });
+
+  it("leaves a recording without the metadata a score edition carries", () => {
+    const recording = readFull().editions?.[0];
+
+    expect(recording?.section).toBe("Recordings");
+    expect(recording?.copyright).toBeNull();
+    expect(recording?.publisher_info).toBeNull();
+    expect(recording?.files).toHaveLength(1);
+  });
+});
+
+describe("the files of an edition", () => {
+  it("reads what the entry publishes about a file", () => {
+    const file = readFull().editions?.[1]?.files[0];
+
+    expect(file).toEqual({
+      imslp_id: 900_002,
+      description: "Complete Score",
+      format: "PDF",
+      size_bytes: 1_614_807,
+      pages: 24,
+      downloads: 1280,
+      rating: { score: 7.5, votes: 4 },
+      uploader: "Inventaire",
+      uploaded_on: "2014-08-15",
+      scanned_by_code: "ZZ-Q",
+      scanned_by_name: "Bibliothèque inventée",
+      page_url: "https://imslp.org/wiki/Three_Inventions_(Aubertin,_Mireille)",
+    });
+  });
+
+  it("reads a rating nobody voted on as absent", () => {
+    // The page prints 0.0 out of 10 next to a dash. Reported as a score, that
+    // reads as the worst rating on the scale rather than as no rating at all.
+    expect(readFull().editions?.[0]?.files[0]?.rating).toBeNull();
+  });
+
+  it("reads a counter the page prints nothing for as unknown", () => {
+    const preview = readFull().editions?.[1]?.files[1];
+
+    expect(preview?.downloads).toBeNull();
+    expect(preview?.rating).toBeNull();
+  });
+
+  it("reads an entry that publishes nothing but its name", () => {
+    const outcome = parseWorkPage(fixture("work-sparse.html"), CONTEXT);
+    if (outcome.kind !== "work") {
+      throw new Error("expected a work");
+    }
+    const file = outcome.work.editions?.[0]?.files[0];
+
+    expect(file?.imslp_id).toBe(900_010);
+    expect(file?.size_bytes).toBeNull();
+    expect(file?.pages).toBeNull();
+    expect(file?.uploader).toBeNull();
+    expect(file?.uploaded_on).toBeNull();
+    expect(file?.format).toBeNull();
+    expect(file?.scanned_by_code).toBeNull();
+    expect(file?.scanned_by_name).toBeNull();
+  });
+
+  it("never publishes an address under a path the site disallows", () => {
+    const serialised = JSON.stringify(readFull());
+
+    expect(serialised).not.toContain("/images/");
+    expect(serialised).not.toContain("/imglnks/");
+    expect(serialised).not.toContain("wiki/File:");
+    expect(serialised).not.toContain("ImagefromIndex");
+  });
+});
+
+describe("a page that stands for another", () => {
+  it("names the page it redirects to", () => {
+    const outcome = parseWorkPage(fixture("work-redirect.html"), CONTEXT);
+
+    expect(outcome).toEqual({
+      kind: "redirect",
+      target: "Trois inventions, Op.12 (Aubertin, Mireille)",
+    });
+  });
+});
+
+describe("a page this parser cannot read", () => {
+  it("reports the failure rather than an empty work", () => {
+    expect(() => parseWorkPage(fixture("work-empty.html"), CONTEXT)).toThrowError(ImslpError);
+
+    try {
+      parseWorkPage(fixture("work-empty.html"), CONTEXT);
+    } catch (error) {
+      expect((error as ImslpError).code).toBe("parse_failure");
+    }
+  });
+});
