@@ -312,6 +312,26 @@ describe("a file the library has blocked", () => {
   });
 });
 
+describe("an entry whose markup closes its tags in the wrong order", () => {
+  it("reads the name the page prints rather than nothing", () => {
+    // A bracket left unclosed in the name makes the rendering close the link
+    // before the span wrapping it. The name is on the page either way, and an
+    // entry answering with none reads as a file the library did not name.
+    const outcome = parseWorkPage(fixture("work-crossed-tags.html"), {
+      ...CONTEXT,
+      pageTitle: "Partition incomplète (Nadaud, Camille)",
+    });
+    if (outcome.kind !== "work") {
+      throw new Error("expected a work");
+    }
+    const file = outcome.work.editions[0]?.files[0];
+
+    expect(file?.description).toBe("Nos.1, 2 Score [incomplete");
+    expect(file?.pages).toBe(12);
+    expect(file?.blocked).toBe(false);
+  });
+});
+
 describe("the format of a file", () => {
   it("keeps what the page wrote, and names the format it stands for", () => {
     // The library writes "PDF" on a score and "MP3 file" on a recording, so a

@@ -598,6 +598,37 @@ ${generalInformation([
 ])}
 `;
 
+/**
+ * An entry whose own markup closes its tags in the wrong order.
+ *
+ * A bracket left unclosed in the name of a file makes the rendering close the
+ * link before the span wrapping it, so a reading that expected the ordinary
+ * order found no name at all where the page prints one.
+ */
+const CROSSED_TAGS = `${tabHeader([{ id: "tabScore1", name: "Scores", count: 1 }])}
+<div class="jq-ui-tabs" id="tabScore1">
+<div class="we"><div id="IMSLP900500" class="we_file_first we_fileblock_1">
+<div class="we_file_download plainlinks">
+<p><b><a rel="nofollow" class="external text" href="https://imslp.org/wiki/Special:ImagefromIndex/900500"><span title="Download this file"><span class="we_file_dlarrwrap"><span class="we_file_dlarrow">&#160;</span></span>Nos.1, 2 Score [incomplete</a></span>]</b><font size="1"><b> (EU)</b></font><br />
+<span class="we_file_info2"><a href="/wiki/File:PMLP000000-invented.pdf" title="File:PMLP000000-invented.pdf">#900500</a> - 1.00MB, 12 pp. </span>
+</p>
+</div>
+<div class="we_clear"></div>
+</div>${editionTable([row("Copyright", copyrightCell("Public Domain"))])}</div>
+<span class="na-marker" id="na-tabScore1" data-type="score" data-name="Scores" data-tabid="tabScore1"></span>
+</div>
+${generalInformation([
+  row(
+    '<span class="wi_head">Work Title</span>',
+    '<span class="wi_head">Partition incomplète</span>',
+  ),
+  row(
+    "Composer",
+    '<a href="/wiki/Category:Nadaud,_Camille" title="Category:Nadaud, Camille">Nadaud, Camille</a>',
+  ),
+])}
+`;
+
 /** A page that stands for another one. */
 const REDIRECT = `<ol><li>REDIRECT <a href="/wiki/Trois_inventions,_Op.12_(Aubertin,_Mireille)" title="Trois inventions, Op.12 (Aubertin, Mireille)">Trois inventions, Op.12 (Aubertin, Mireille)</a>
 </li></ol>
@@ -750,6 +781,7 @@ const PAGES = {
   "work-odd-entries.html": ODD_ENTRIES,
   "work-remarked-copyright.html": REMARKED_COPYRIGHT,
   "work-blocked-file.html": BLOCKED_FILE,
+  "work-crossed-tags.html": CROSSED_TAGS,
   "person.html": PERSON,
   "person-bare.html": PERSON_BARE,
   "person-links-only.html": PERSON_LINKS_ONLY,

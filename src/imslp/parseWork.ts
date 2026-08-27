@@ -51,9 +51,14 @@ const EDITION_TABLE = /<table class="we_edition_info/;
  * The link is titled "Download this file" on an ordinary entry and carries the
  * reason for the suspension on one the library is reviewing. Reading the name
  * through the ordinary wording lost both on the entries that matter most.
+ *
+ * The name ends at whichever tag closes first. A bracket left unclosed in the
+ * name of a file makes the rendering close the link before the span wrapping
+ * it, and a reading that expected one order alone found no name where the page
+ * prints one.
  */
 const ENTRY_LINK =
-  /<span title="([^"]*)"><span class="we_file_dlarrwrap">.*?<\/span><\/span>(.*?)<\/span>\s*<\/a>/s;
+  /<span title="([^"]*)"><span class="we_file_dlarrwrap">.*?<\/span><\/span>(.*?)<\/(?:span|a)>/s;
 const AVAILABLE = "Download this file";
 /** The noun the library appends to the format of a recording. */
 const A_FILE = /\s+file$/i;
