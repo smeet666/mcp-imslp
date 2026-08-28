@@ -94,6 +94,15 @@ describe("what the registry accepts", () => {
 
 describe("what the published archive carries", () => {
   it("holds the documents a reader needs and the code they run", () => {
-    expect(pkg.files).toEqual(["dist", "README.md", "LICENSE", "CHANGELOG.md", "server.json"]);
+    // Equality, not presence: a file dropped from this list leaves the
+    // published archive without anything failing.
+    expect([...(pkg.files as string[])].sort()).toEqual([
+      "CHANGELOG.md",
+      "LICENSE",
+      "PRIVACY.md",
+      "README.md",
+      "dist",
+      "server.json",
+    ]);
   });
 });
