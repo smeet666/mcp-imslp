@@ -44,213 +44,31 @@
   "tools": [
     {
       "name": "search_works",
-      "description": "Search the works of IMSLP by title, by composer, or by words printed on their pages.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300,
-            "description": "What to look for in the works of the library. Words are matched across the page, not only titles."
-          },
-          "limit": {
-            "default": 10,
-            "description": "Rows to serve, from 1 to 50.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 50
-          },
-          "offset": {
-            "default": 0,
-            "description": "Rows to skip, using the 'next_offset' a previous answer named.",
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          }
-        },
-        "required": ["query"],
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Search the works of IMSLP by title, by composer, or by words printed on their pages."
     },
     {
       "name": "search_people",
-      "description": "Find the composers, editors, arrangers and performers of IMSLP by name.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300,
-            "description": "What to look for among the people of the library. Words are matched across the page, not only titles."
-          },
-          "limit": {
-            "default": 10,
-            "description": "Rows to serve, from 1 to 50.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 50
-          },
-          "offset": {
-            "default": 0,
-            "description": "Rows to skip, using the 'next_offset' a previous answer named.",
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          }
-        },
-        "required": ["query"],
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Find the composers, editors, arrangers and performers of IMSLP by name."
     },
     {
       "name": "get_work",
-      "description": "Read one work: its titles, composer, catalogue numbers, dates, key, instrumentation and the terms its scores are published under.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "description": "The title of the work's page, written 'Work (Composer)', for example 'Nocturnes, Op.9 (Chopin, Frédéric)'. Pass this or 'pageid', not both.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300
-          },
-          "pageid": {
-            "description": "The page id a search returns. Pass this or 'page', not both.",
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-          }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Read one work: its titles, composer, catalogue numbers, dates, key, instrumentation and the terms its scores are published under."
     },
     {
       "name": "list_work_files",
-      "description": "Read the scores and recordings a work holds, edition by edition, with the copyright status of each.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "description": "The title of the work's page, written 'Work (Composer)', for example 'Nocturnes, Op.9 (Chopin, Frédéric)'. Pass this or 'pageid', not both.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300
-          },
-          "pageid": {
-            "description": "The page id a search returns. Pass this or 'page', not both.",
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-          },
-          "section": {
-            "description": "One section of the page, in the wording the page prints: 'Scores', 'Parts', 'Recordings', 'Arrangements and Transcriptions', 'Full Scores', 'Synthesized/MIDI'. Matched without regard to case. Left out, every section is read.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 80
-          },
-          "limit": {
-            "default": 10,
-            "description": "Editions to serve, from 1 to 100.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "offset": {
-            "default": 0,
-            "description": "Editions to skip, for reading a work whose page holds many.",
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Read the scores and recordings a work holds, edition by edition, with the copyright status of each."
     },
     {
       "name": "list_person_works",
-      "description": "Read the works IMSLP files under a person, as a composer, an editor, an arranger or a performer.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "category": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300,
-            "description": "The person's category, written 'Category:Surname, Forename', for example 'Category:Chopin, Frédéric'. The prefix is added when it is left out."
-          },
-          "limit": {
-            "default": 25,
-            "description": "Rows to serve, from 1 to 100.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "cursor": {
-            "description": "The 'cursor' a previous answer named, to read on from where it stopped. The library writes it itself, so it is passed back as it was given rather than built.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 500
-          }
-        },
-        "required": ["category"],
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Read the works IMSLP files under a person, as a composer, an editor, an arranger or a performer."
     },
     {
       "name": "get_person",
-      "description": "Read what IMSLP holds about a person: the name its page prints, the life dates it states, and the registers holding a record of them.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "category": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300,
-            "description": "The person's category, written 'Category:Surname, Forename', for example 'Category:Satie, Erik'. The prefix is added when it is left out."
-          }
-        },
-        "required": ["category"],
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Read what IMSLP holds about a person: the name its page prints, the life dates it states, and the registers holding a record of them."
     },
     {
       "name": "browse_category",
-      "description": "Read the works IMSLP files under a genre, a key, an instrumentation or a period.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "category": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300,
-            "description": "The category to read, in the library's own wording, for example 'For piano', 'Nocturnes' or 'Category:B-flat minor'. The prefix is added when it is left out."
-          },
-          "limit": {
-            "default": 25,
-            "description": "Rows to serve, from 1 to 100.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "cursor": {
-            "description": "The 'cursor' a previous answer named, to read on from where it stopped. The library writes it itself, so it is passed back as it was given rather than built.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 500
-          }
-        },
-        "required": ["category"],
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Read the works IMSLP files under a genre, a key, an instrumentation or a period."
     }
   ],
   "compatibility": {
