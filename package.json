@@ -58,7 +58,8 @@
     "prepublishOnly": "npm run typecheck && npm run test && npm run build",
     "start": "node dist/index.js",
     "inspector": "npx @modelcontextprotocol/inspector node dist/index.js",
-    "test:eval": "vitest run test/eval --testTimeout=300000 --disable-console-intercept"
+    "test:eval": "vitest run test/eval --testTimeout=300000 --disable-console-intercept",
+    "audit:floors": "node scripts/audit-floors.mjs"
   },
   "keywords": [
     "mcp",
