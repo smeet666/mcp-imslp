@@ -1,0 +1,2084 @@
+{
+  "author": "Damien Bouissou",
+  "authorUrl": "https://github.com/smeet666",
+  "description": "MCP server for IMSLP, the Petrucci Music Library. Read works, scores and recordings. No API key required.",
+  "homepage": "https://github.com/smeet666/mcp-imslp#readme",
+  "identifier": "smeet666-mcp-imslp",
+  "name": "mcp-imslp",
+  "prompts": [],
+  "resources": [],
+  "tags": [
+    "mcp",
+    "modelcontextprotocol",
+    "model-context-protocol",
+    "mcp-server",
+    "imslp",
+    "petrucci",
+    "sheet-music",
+    "score",
+    "scores",
+    "classical-music",
+    "public-domain",
+    "music",
+    "claude",
+    "cursor",
+    "llm",
+    "ai",
+    "no-api-key"
+  ],
+  "tools": [
+    {
+      "name": "search_works",
+      "title": "Search the works",
+      "description": "Search the works of IMSLP by title, by composer, or by words printed on their pages. Each row names the page of a work, which is how get_work and list_work_files address it: a title is written 'Work (Composer)', and the row splits it into the work and the person it names. IMSLP publishes no count of what a search matched, so 'total' is always null; 'has_more' and 'next_offset' say whether the library held more rows and where to read on from. A snippet is words taken from the page around the match. The library writes its pages in wikitext, so a snippet sometimes shows the name of a file rather than a sentence, and some rows carry none at all. The library titles a work in the language its composer used, so 'Die Zauberflöte' and not 'The Magic Flute', 'Sinfonia' and not 'Symphony'. A title translated into another language finds nothing, or finds only the works written about it: rows that look thin for a famous work are a sign the work sits under its original title, not that the library lacks it. Searching for a person by name finds the works naming them; search_people finds the person. When you show a result to a user, credit IMSLP and link the page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "What to look for in the works of the library. Words are matched across the page, not only titles."
+          },
+          "limit": {
+            "default": 10,
+            "description": "Rows to serve, from 1 to 50.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "offset": {
+            "default": 0,
+            "description": "Rows to skip, using the 'next_offset' a previous answer named.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["query"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "page": {
+                  "type": "string",
+                  "description": "The page title, which get_work takes as 'page'."
+                },
+                "work": {
+                  "type": "string",
+                  "description": "The work, read off the title."
+                },
+                "composer": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The person the title names, or null for a title written outside that form."
+                },
+                "page_url": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Words from the page around the match, as published and free of markup. Null on a row the search summarised with nothing. The library writes its pages in wikitext, so a snippet sometimes shows the name of a file rather than a sentence."
+                },
+                "size_bytes": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "The size of the page, as the library states it."
+                },
+                "words": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Words on the page, as the library counts them."
+                },
+                "last_edited": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The day the page last changed, as an ISO date."
+                }
+              },
+              "required": [
+                "page",
+                "work",
+                "composer",
+                "page_url",
+                "snippet",
+                "size_bytes",
+                "words",
+                "last_edited"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "query": {
+            "type": "string",
+            "description": "The search as it reached the library."
+          },
+          "returned": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "True when the library named an offset to continue from."
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The offset to read on from, as the library named it. Null when it named none."
+          },
+          "total": {
+            "type": "null",
+            "description": "Always null: IMSLP publishes no count of what a search matched."
+          },
+          "source": {
+            "type": "string",
+            "const": "IMSLP"
+          },
+          "license": {
+            "type": "string",
+            "const": "CC BY-SA 4.0"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "results",
+          "query",
+          "returned",
+          "offset",
+          "limit",
+          "has_more",
+          "next_offset",
+          "total",
+          "source",
+          "license",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "search_people",
+      "title": "Search the people",
+      "description": "Find the composers, editors, arrangers and performers of IMSLP by name. The library addresses a person by a category, written 'Category:Surname, Forename', and that is what list_person_works and get_person take. A name is written the library's own way, so searching finds it where guessing at the spelling does not. Some rows stand for another category rather than for a person: the library keeps a redirect for a name spelled differently, and 'redirect_to' names the category it leads to. Follow it rather than reading works under the redirect, which holds none. IMSLP publishes no count of what a search matched, so 'total' is always null. When you show a person to a user, credit IMSLP and link the page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "What to look for among the people of the library. Words are matched across the page, not only titles."
+          },
+          "limit": {
+            "default": 10,
+            "description": "Rows to serve, from 1 to 50.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "offset": {
+            "default": 0,
+            "description": "Rows to skip, using the 'next_offset' a previous answer named.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["query"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string",
+                  "description": "The category the person is addressed by, which list_person_works takes."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name as the library writes it, without the category prefix."
+                },
+                "page_url": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Words from the page around the match, as published and free of markup. Null on a row the search summarised with nothing. The library writes its pages in wikitext, so a snippet sometimes shows the name of a file rather than a sentence."
+                },
+                "redirect_to": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The category this row stands for, when it is a redirect rather than a person. Null for a row that is the person's own category."
+                },
+                "last_edited": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The day the page last changed, as an ISO date."
+                }
+              },
+              "required": ["category", "name", "page_url", "snippet", "redirect_to", "last_edited"],
+              "additionalProperties": false
+            }
+          },
+          "query": {
+            "type": "string",
+            "description": "The search as it reached the library."
+          },
+          "returned": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "True when the library named an offset to continue from."
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The offset to read on from, as the library named it. Null when it named none."
+          },
+          "total": {
+            "type": "null",
+            "description": "Always null: IMSLP publishes no count of what a search matched."
+          },
+          "source": {
+            "type": "string",
+            "const": "IMSLP"
+          },
+          "license": {
+            "type": "string",
+            "const": "CC BY-SA 4.0"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "results",
+          "query",
+          "returned",
+          "offset",
+          "limit",
+          "has_more",
+          "next_offset",
+          "total",
+          "source",
+          "license",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get_work",
+      "title": "Read a work",
+      "description": "Read one work on IMSLP: its title and alternative titles, the composer, the opus and catalogue numbers, the year it was written and the year it was first published, the dedication, the key, the instrumentation, the style and period, and how many scores and recordings the page holds. Address a work by its page title, written 'Work (Composer)', for example 'Nocturnes, Op.9 (Chopin, Frédéric)', or by the page id. Dates and durations come back in the wording the page used: 'ca.1830' stays 'ca.1830', because a bare year would state a certainty the library declined to state. A facet the page leaves empty comes back null rather than guessed. A work holding a few editions comes back with them, files included. One holding many comes back with 'editions' null and 'editions_truncated' true, and list_work_files pages through them. The copyright of a score is stated per jurisdiction: 'Public Domain - Non-PD US' is free in Canada and the European Union and protected in the United States, so never report a score as public domain without saying where. No score file is downloaded or linked; the work page is what an answer links to. When you show a work to a user, credit IMSLP and link that page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "description": "The title of the work's page, written 'Work (Composer)', for example 'Nocturnes, Op.9 (Chopin, Frédéric)'. Pass this or 'pageid', not both.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "pageid": {
+            "description": "The page id a search returns. Pass this or 'page', not both.",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "page_title": {
+            "type": "string"
+          },
+          "page_url": {
+            "type": "string"
+          },
+          "pageid": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The number IMSLP gives the page. Known when the work was addressed by it, and null when it was addressed by title: a rendered page states its title and nothing else."
+          },
+          "alternative_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "composer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "composer_page_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "opus_catalogue_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "internal_catalogue_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "composition_year": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "As published, for example 'ca.1830'."
+          },
+          "first_publication": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dedication": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "average_duration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "librettist": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "composer_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "piece_style": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "instrumentation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "movements": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "first_performance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extra_information": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "genre_categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "external_links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": ["label", "url"],
+              "additionalProperties": false
+            }
+          },
+          "authorities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "authority": {
+                  "type": "string",
+                  "description": "The register, for example 'VIAF' or 'BNF'."
+                },
+                "id": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The identifier in that register, when it names one."
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": ["authority", "id", "url"],
+              "additionalProperties": false
+            },
+            "description": "Records of the work in library catalogues: VIAF, LCCN, WorldCat, BNF, GND."
+          },
+          "copyright_summary": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "statement": {
+                  "type": "string",
+                  "description": "The statement as IMSLP publishes it."
+                },
+                "headline": {
+                  "type": "string",
+                  "description": "What the statement leads with, for example 'Public Domain'."
+                },
+                "restrictions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The jurisdictions the statement excludes, for example 'Non-PD US'. Empty when it excludes none, which is not a claim about countries IMSLP does not review."
+                },
+                "remark": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "A remark the library wrote beside the statement, for example 'See notes on copyright status for urtext editions'. It qualifies the terms without naming a place."
+                },
+                "reviewed_in": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Where IMSLP checks copyright: Canada, the United States and the European Union."
+                },
+                "editions": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "statement",
+                "headline",
+                "restrictions",
+                "remark",
+                "reviewed_in",
+                "editions"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The terms the scores of this work are published under, one entry per distinct statement, with the number of editions on the page carrying it. Stated whether or not the editions themselves fit in this answer."
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "files": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["name", "files"],
+              "additionalProperties": false
+            },
+            "description": "The sections of the page, with the number of entries the site counts in each."
+          },
+          "editions": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "section": {
+                      "type": "string",
+                      "description": "The section of the page it sits in, for example 'Scores'."
+                    },
+                    "copyright": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "statement": {
+                              "type": "string",
+                              "description": "The statement as IMSLP publishes it."
+                            },
+                            "headline": {
+                              "type": "string",
+                              "description": "What the statement leads with, for example 'Public Domain'."
+                            },
+                            "restrictions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "The jurisdictions the statement excludes, for example 'Non-PD US'. Empty when it excludes none, which is not a claim about countries IMSLP does not review."
+                            },
+                            "remark": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "A remark the library wrote beside the statement, for example 'See notes on copyright status for urtext editions'. It qualifies the terms without naming a place."
+                            },
+                            "reviewed_in": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Where IMSLP checks copyright: Canada, the United States and the European Union."
+                            }
+                          },
+                          "required": [
+                            "statement",
+                            "headline",
+                            "restrictions",
+                            "remark",
+                            "reviewed_in"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "publisher_info": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "editor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "arranger": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "performers": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "misc_notes": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "A note an editor typed, quoted as published."
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "imslp_id": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "What the entry is called, for example 'Complete Score'."
+                          },
+                          "blocked": {
+                            "type": "boolean",
+                            "description": "True when IMSLP has suspended access to this file, which it does while reviewing the copyright of one. Never report such a file as available."
+                          },
+                          "blocked_reason": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What the library says about the suspension, as published. Null when none applies."
+                          },
+                          "format": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The format as the page writes it: 'PDF' on a score, 'MP3 file' on a recording."
+                          },
+                          "format_code": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The same format without the noun the library appends to a recording: 'PDF', 'MP3', 'MID', 'ZIP', 'FLAC', 'MP4'. Filter on this rather than on the published wording."
+                          },
+                          "size_bytes": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "pages": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "downloads": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Null when the entry prints no counter, which is not a count of zero."
+                          },
+                          "rating": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "score": {
+                                    "type": "number"
+                                  },
+                                  "votes": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": ["score", "votes"],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Null when nobody has voted, since the page then prints 0.0 out of 10."
+                          },
+                          "uploader": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "uploaded_on": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "An ISO date."
+                          },
+                          "scanned_by_code": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The RISM sigla of the library that scanned it, for example 'US-R'."
+                          },
+                          "scanned_by_name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "page_url": {
+                            "type": "string",
+                            "description": "The work page. The file itself is never linked."
+                          }
+                        },
+                        "required": [
+                          "imslp_id",
+                          "description",
+                          "blocked",
+                          "blocked_reason",
+                          "format",
+                          "format_code",
+                          "size_bytes",
+                          "pages",
+                          "downloads",
+                          "rating",
+                          "uploader",
+                          "uploaded_on",
+                          "scanned_by_code",
+                          "scanned_by_name",
+                          "page_url"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "section",
+                    "copyright",
+                    "publisher_info",
+                    "editor",
+                    "arranger",
+                    "performers",
+                    "misc_notes",
+                    "files"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Every edition the page holds, files included. Null when the work holds more of them than one answer carries, and list_work_files then pages through them."
+          },
+          "editions_truncated": {
+            "type": "boolean"
+          },
+          "redirected_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The title asked for, when it redirected here."
+          },
+          "source": {
+            "type": "string",
+            "const": "IMSLP"
+          },
+          "license": {
+            "type": "string",
+            "const": "CC BY-SA 4.0"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "page_title",
+          "page_url",
+          "pageid",
+          "alternative_title",
+          "composer",
+          "composer_page_url",
+          "opus_catalogue_number",
+          "internal_catalogue_number",
+          "composition_year",
+          "first_publication",
+          "dedication",
+          "average_duration",
+          "key",
+          "language",
+          "librettist",
+          "composer_period",
+          "piece_style",
+          "instrumentation",
+          "movements",
+          "first_performance",
+          "extra_information",
+          "genre_categories",
+          "external_links",
+          "authorities",
+          "copyright_summary",
+          "sections",
+          "editions",
+          "editions_truncated",
+          "redirected_from",
+          "source",
+          "license",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "list_work_files",
+      "title": "Read the editions of a work",
+      "description": "Read the scores and recordings a work on IMSLP holds, edition by edition. An edition is a set of files published under one set of terms: the publisher, the editor and the copyright statement belong to the edition, and its files are the entries under it. A block of recordings carries performers instead, and no copyright statement at all. Address the work by its page title, written 'Work (Composer)', or by its page id, and read it a page at a time with 'limit' and 'offset'. 'editions_on_page' counts the editions the page holds, so it says how far a reading can go. Restrict to one part of the page with 'section', using the names the page itself prints: 'Scores', 'Parts', 'Arrangements and Transcriptions', 'Recordings', 'Full Scores' and others. A restriction matching nothing comes back with the sections the page does hold rather than as a work without scores. The copyright of a score is stated per jurisdiction: 'Public Domain - Non-PD US' is free in Canada and the European Union and protected in the United States, so never report a score as public domain without saying where. No score file is downloaded or linked; the work page is what an answer links to. When you show an edition to a user, credit IMSLP and link that page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "description": "The title of the work's page, written 'Work (Composer)', for example 'Nocturnes, Op.9 (Chopin, Frédéric)'. Pass this or 'pageid', not both.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "pageid": {
+            "description": "The page id a search returns. Pass this or 'page', not both.",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "section": {
+            "description": "One section of the page, in the wording the page prints: 'Scores', 'Parts', 'Recordings', 'Arrangements and Transcriptions', 'Full Scores', 'Synthesized/MIDI'. Matched without regard to case. Left out, every section is read.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "limit": {
+            "default": 10,
+            "description": "Editions to serve, from 1 to 100.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "default": 0,
+            "description": "Editions to skip, for reading a work whose page holds many.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "page_title": {
+            "type": "string"
+          },
+          "page_url": {
+            "type": "string"
+          },
+          "pageid": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "The work these editions belong to."
+          },
+          "composer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The restriction this answer was read under."
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "files": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["name", "files"],
+              "additionalProperties": false
+            },
+            "description": "The sections of the page, with the number of entries the site counts in each."
+          },
+          "editions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "section": {
+                  "type": "string",
+                  "description": "The section of the page it sits in, for example 'Scores'."
+                },
+                "copyright": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statement": {
+                          "type": "string",
+                          "description": "The statement as IMSLP publishes it."
+                        },
+                        "headline": {
+                          "type": "string",
+                          "description": "What the statement leads with, for example 'Public Domain'."
+                        },
+                        "restrictions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The jurisdictions the statement excludes, for example 'Non-PD US'. Empty when it excludes none, which is not a claim about countries IMSLP does not review."
+                        },
+                        "remark": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "A remark the library wrote beside the statement, for example 'See notes on copyright status for urtext editions'. It qualifies the terms without naming a place."
+                        },
+                        "reviewed_in": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Where IMSLP checks copyright: Canada, the United States and the European Union."
+                        }
+                      },
+                      "required": [
+                        "statement",
+                        "headline",
+                        "restrictions",
+                        "remark",
+                        "reviewed_in"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "publisher_info": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "editor": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "arranger": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "performers": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "misc_notes": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "A note an editor typed, quoted as published."
+                },
+                "files": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "imslp_id": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "description": {
+                        "type": "string",
+                        "description": "What the entry is called, for example 'Complete Score'."
+                      },
+                      "blocked": {
+                        "type": "boolean",
+                        "description": "True when IMSLP has suspended access to this file, which it does while reviewing the copyright of one. Never report such a file as available."
+                      },
+                      "blocked_reason": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "What the library says about the suspension, as published. Null when none applies."
+                      },
+                      "format": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The format as the page writes it: 'PDF' on a score, 'MP3 file' on a recording."
+                      },
+                      "format_code": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The same format without the noun the library appends to a recording: 'PDF', 'MP3', 'MID', 'ZIP', 'FLAC', 'MP4'. Filter on this rather than on the published wording."
+                      },
+                      "size_bytes": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "pages": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "downloads": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Null when the entry prints no counter, which is not a count of zero."
+                      },
+                      "rating": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "score": {
+                                "type": "number"
+                              },
+                              "votes": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": ["score", "votes"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Null when nobody has voted, since the page then prints 0.0 out of 10."
+                      },
+                      "uploader": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "uploaded_on": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "An ISO date."
+                      },
+                      "scanned_by_code": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The RISM sigla of the library that scanned it, for example 'US-R'."
+                      },
+                      "scanned_by_name": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "page_url": {
+                        "type": "string",
+                        "description": "The work page. The file itself is never linked."
+                      }
+                    },
+                    "required": [
+                      "imslp_id",
+                      "description",
+                      "blocked",
+                      "blocked_reason",
+                      "format",
+                      "format_code",
+                      "size_bytes",
+                      "pages",
+                      "downloads",
+                      "rating",
+                      "uploader",
+                      "uploaded_on",
+                      "scanned_by_code",
+                      "scanned_by_name",
+                      "page_url"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "section",
+                "copyright",
+                "publisher_info",
+                "editor",
+                "arranger",
+                "performers",
+                "misc_notes",
+                "files"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "editions_on_page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Editions the page holds, counted here rather than published by IMSLP."
+          },
+          "editions_in_section": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Editions left after the restriction, equal to 'editions_on_page' without one."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "returned": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "redirected_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "const": "IMSLP"
+          },
+          "license": {
+            "type": "string",
+            "const": "CC BY-SA 4.0"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "page_title",
+          "page_url",
+          "pageid",
+          "title",
+          "composer",
+          "section",
+          "sections",
+          "editions",
+          "editions_on_page",
+          "editions_in_section",
+          "offset",
+          "limit",
+          "returned",
+          "has_more",
+          "redirected_from",
+          "source",
+          "license",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "list_person_works",
+      "title": "Read the works of a person",
+      "description": "Read the works IMSLP files under a person: what a composer wrote, and also what an editor, an arranger or a performer is credited on. The person is named by the category the library addresses them by, written 'Category:Surname, Forename', which search_people finds. The prefix may be left out. IMSLP publishes no count of what a category holds, so 'total' is always null; 'has_more' and 'cursor' say whether the library held more rows and how to read them. A category the library does not hold answers exactly as an empty one does, so an answer with no rows means one of the two rather than a person without works. When you show a work to a user, credit IMSLP and link the page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "The person's category, written 'Category:Surname, Forename', for example 'Category:Chopin, Frédéric'. The prefix is added when it is left out."
+          },
+          "limit": {
+            "default": 25,
+            "description": "Rows to serve, from 1 to 100.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "cursor": {
+            "description": "The 'cursor' a previous answer named, to read on from where it stopped. The library writes it itself, so it is passed back as it was given rather than built.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": ["category"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "page": {
+                  "type": "string",
+                  "description": "The page title, which get_work takes as 'page'."
+                },
+                "work": {
+                  "type": "string",
+                  "description": "The work, read off the title."
+                },
+                "composer": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The person the title names, or null for a title written outside that form."
+                },
+                "pageid": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "The page id, which get_work also takes."
+                },
+                "page_url": {
+                  "type": "string"
+                }
+              },
+              "required": ["page", "work", "composer", "pageid", "page_url"],
+              "additionalProperties": false
+            }
+          },
+          "category": {
+            "type": "string",
+            "description": "The category as it reached the library, prefix included."
+          },
+          "returned": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "True when the library named a cursor to continue from."
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The cursor to read on from, as the library named it. Null when it named none."
+          },
+          "total": {
+            "type": "null",
+            "description": "Always null: IMSLP publishes no count of what a category holds."
+          },
+          "source": {
+            "type": "string",
+            "const": "IMSLP"
+          },
+          "license": {
+            "type": "string",
+            "const": "CC BY-SA 4.0"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "results",
+          "category",
+          "returned",
+          "limit",
+          "has_more",
+          "cursor",
+          "total",
+          "source",
+          "license",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get_person",
+      "title": "Read a person",
+      "description": "Read what IMSLP holds about a person: the name as its page prints it, the life dates it states, the other names it files them under, the registers holding a record of them, and the addresses it points to off the site. The person is named by the category the library addresses them by, written 'Category:Surname, Forename', which search_people finds. The prefix may be left out. Life dates come back in the wording the page used, since the library writes '1861-1934' on one page and '4 March 1861 — 2 November 1934' on another, and a page holding none says so. This reads the person; list_person_works reads what they wrote. When you show a person to a user, credit IMSLP and link the page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "The person's category, written 'Category:Surname, Forename', for example 'Category:Satie, Erik'. The prefix is added when it is left out."
+          }
+        },
+        "required": ["category"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "The category the library addresses them by."
+          },
+          "catalogued_as": {
+            "type": "string",
+            "description": "The name without the prefix, surname first."
+          },
+          "name": {
+            "type": "string",
+            "description": "The name as the page prints it, which reads forename first."
+          },
+          "life_dates": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The dates beside the name, exactly as published. Null when the page prints none."
+          },
+          "alternative_names": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The other names and transliterations the library files them under, as the line was published. It separates names with commas and a name written surname first carries one of its own, so the line is not cut into a list."
+          },
+          "aliases": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The aliases line as published, separated the same way."
+          },
+          "authorities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "authority": {
+                  "type": "string",
+                  "description": "The register, for example 'VIAF' or 'BNF'."
+                },
+                "id": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The identifier in that register, when it names one."
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": ["authority", "id", "url"],
+              "additionalProperties": false
+            }
+          },
+          "external_links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": ["label", "url"],
+              "additionalProperties": false
+            }
+          },
+          "page_url": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "const": "IMSLP"
+          },
+          "license": {
+            "type": "string",
+            "const": "CC BY-SA 4.0"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "category",
+          "catalogued_as",
+          "name",
+          "life_dates",
+          "alternative_names",
+          "aliases",
+          "authorities",
+          "external_links",
+          "page_url",
+          "source",
+          "license",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "browse_category",
+      "title": "Browse a category",
+      "description": "Read the works IMSLP files under a category: a genre, a key, an instrumentation or a period. The library writes these names itself, and get_work hands them back for a work under 'genre_categories': 'Nocturnes', 'For piano', 'Scores featuring the piano', 'B-flat minor'. Pass one of those rather than a name of your own, since a category the library does not hold answers exactly as an empty one does. The 'Category:' prefix may be left out. The library cannot cross two categories, so a question naming both a genre and an instrument is answered by browsing one and reading the other off each work. IMSLP publishes no count of what a category holds, so 'total' is always null; 'has_more' and 'cursor' say whether more rows remain and how to read them. When you show a work to a user, credit IMSLP and link the page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "The category to read, in the library's own wording, for example 'For piano', 'Nocturnes' or 'Category:B-flat minor'. The prefix is added when it is left out."
+          },
+          "limit": {
+            "default": 25,
+            "description": "Rows to serve, from 1 to 100.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "cursor": {
+            "description": "The 'cursor' a previous answer named, to read on from where it stopped. The library writes it itself, so it is passed back as it was given rather than built.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": ["category"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "page": {
+                  "type": "string",
+                  "description": "The page title, which get_work takes as 'page'."
+                },
+                "work": {
+                  "type": "string",
+                  "description": "The work, read off the title."
+                },
+                "composer": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The person the title names, or null for a title written outside that form."
+                },
+                "pageid": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "The page id, which get_work also takes."
+                },
+                "page_url": {
+                  "type": "string"
+                }
+              },
+              "required": ["page", "work", "composer", "pageid", "page_url"],
+              "additionalProperties": false
+            }
+          },
+          "category": {
+            "type": "string",
+            "description": "The category as it reached the library, prefix included."
+          },
+          "returned": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "True when the library named a cursor to continue from."
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The cursor to read on from, as the library named it. Null when it named none."
+          },
+          "total": {
+            "type": "null",
+            "description": "Always null: IMSLP publishes no count of what a category holds."
+          },
+          "source": {
+            "type": "string",
+            "const": "IMSLP"
+          },
+          "license": {
+            "type": "string",
+            "const": "CC BY-SA 4.0"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "results",
+          "category",
+          "returned",
+          "limit",
+          "has_more",
+          "cursor",
+          "total",
+          "source",
+          "license",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    }
+  ],
+  "version": "1.0.1"
+}
