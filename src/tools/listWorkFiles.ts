@@ -192,7 +192,7 @@ function noteworthy(
 
 function asText(work: Work, served: Edition[], span: { offset: number; total: number }): string {
   const lines = [
-    work.composer === null ? work.title : `${work.title} — ${work.composer}`,
+    work.composer === null ? work.title : `${work.title} · ${work.composer}`,
     work.page_url,
     served.length === 0
       ? "No edition served."
@@ -213,7 +213,7 @@ function editionAsText(edition: Edition): string {
     edition.copyright === null ? null : copyrightAsText(edition.copyright),
   ]
     .filter((part): part is string => part !== null)
-    .join(" — ");
+    .join(" · ");
 
   const files = edition.files.map(
     (file) =>

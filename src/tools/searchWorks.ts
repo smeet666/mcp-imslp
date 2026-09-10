@@ -107,7 +107,7 @@ export async function runSearchWorks(
 
     const body = results
       .map(
-        (row) => `${row.work}${row.composer === null ? "" : ` — ${row.composer}`}\n${row.page_url}`,
+        (row) => `${row.work}${row.composer === null ? "" : ` · ${row.composer}`}\n${row.page_url}`,
       )
       .join("\n\n");
     noteIfTextIsCut(body, notes);
