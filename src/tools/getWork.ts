@@ -185,7 +185,7 @@ function noteworthy(work: Work, truncated: boolean, cached: boolean): string[] {
  */
 function asText(answered: { editions: Edition[] | null }, work: Work): string {
   const lines = [
-    work.composer === null ? work.title : `${work.title} — ${work.composer}`,
+    work.composer === null ? work.title : `${work.title} · ${work.composer}`,
     work.page_url,
   ];
 
@@ -234,7 +234,7 @@ function editionAsText(edition: Edition): string {
     edition.copyright === null ? null : copyrightAsText(edition.copyright),
   ]
     .filter((part): part is string => part !== null)
-    .join(" — ");
+    .join(" · ");
 
   const files = edition.files.map(
     (file) =>
