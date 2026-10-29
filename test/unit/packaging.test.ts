@@ -81,7 +81,9 @@ describe("what a host is told before the server runs", () => {
     const { tools } = await client.listTools();
     const announced = (manifest.tools as { name: string }[]).map((tool) => tool.name);
 
-    expect([...announced].sort()).toEqual(tools.map((tool) => tool.name).sort());
+    expect([...announced].sort((a, b) => Number(a > b) - Number(a < b))).toEqual(
+      tools.map((tool) => tool.name).sort(),
+    );
     await server.close();
   });
 });
@@ -96,7 +98,7 @@ describe("what the published archive carries", () => {
   it("holds the documents a reader needs and the code they run", () => {
     // Equality, not presence: a file dropped from this list leaves the
     // published archive without anything failing.
-    expect([...(pkg.files as string[])].sort()).toEqual([
+    expect([...(pkg.files as string[])].sort((a, b) => Number(a > b) - Number(a < b))).toEqual([
       "CHANGELOG.md",
       "LICENSE",
       "PRIVACY.md",
